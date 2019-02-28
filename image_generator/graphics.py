@@ -1,4 +1,5 @@
 import numpy as np
+from copy import deepcopy
 
 SIDE_LINE_INTENSITY = 1.0
 CENTER_LINE_INTENSITY = 0.7
@@ -29,6 +30,7 @@ class Scene:
         # check the road is reasonable
         s = [self.x1, self.x2, self.x3, self.x4, self.x5, self.x6]
         assert sorted(range(len(s)), key=lambda k: s[k]) == [0,1,2,3,4,5], "Scene dimensions not reasonable, change the paramters"
+        self.critical_points = [-self.x6, -self.x5, -self.x4, -self.x3, -self.x2, -self.x1, self.x1, self.x2, self.x3, self.x4, self.x5, self.x6]
 
     def get_intensity_at_point(self, x, y):
         if x<0:
@@ -45,6 +47,17 @@ class Scene:
             return self._interpolate(self.x1, self.center_line_intensity, self.x2, self.road_intensity, x)
         else:
             return self.center_line_intensity
+
+    def get_intensity_range(self, x_min, x_max):
+        # Get the range for intensity within (x_min, x_max)
+        # Get the set of critical points within (x_min, x_max)
+        critical_points = [x_min, x_max]
+        for x in self.critical_points:
+            if (x_min < x) and (x < x_max):
+                critical_points.append(x)
+        # Read intensity of each critical points, take max and min values
+        critical_intensities = [self.get_intensity_at_point(x,0) for x in critical_points]
+        return (min(critical_intensities), max(critical_intensities))
 
     def get_sky_intensity(self):
         return self.sky_intensity
@@ -66,6 +79,7 @@ class Viewer:
         self.pixel_num = camera_params['pixel_num'] # n-by-n image
         self.pixel_size = camera_params['pixel_size'] # edge length for single pixel
         self.scene = scene
+        self.angle_to_x_axis = self._compute_angle_to_x_axis()
 
     def take_picture(self, offset, angle):
         # offset is x for the camera, angle is positive for counterclockwise viewing down z axis
@@ -84,6 +98,59 @@ class Viewer:
 
         pixel_matrix = self._quantize_image(pixel_matrix)
         return pixel_matrix
+
+    def take_picture_with_range(self, offset, angle, delta_x, delta_phi):
+        # offset plus_or_minus delta_x, angle plus_or_minus delta_phi is the small box of interest.
+        # Return: an image, and a matrix of lower bound of each pixel and another of higher bound of each pixel
+        image_matrix = np.zeros((self.pixel_num, self.pixel_num))
+        lower_bound_matrix = np.zeros((self.pixel_num, self.pixel_num))
+        upper_bound_matrix = np.zeros((self.pixel_num, self.pixel_num))
+        image_to_world_transform_center = self._compute_transform(offset, angle)
+
+        image_to_world_transform_criticals = []
+        image_to_world_transform_criticals.append(self._compute_transform(offset-delta_x, angle-delta_phi))
+        image_to_world_transform_criticals.append(self._compute_transform(offset+delta_x, angle-delta_phi))
+        image_to_world_transform_criticals.append(self._compute_transform(offset-delta_x, angle+delta_phi))
+        image_to_world_transform_criticals.append(self._compute_transform(offset+delta_x, angle+delta_phi))
+
+        # for each pixel, get pixel center coordinate using offset and angle
+        for j in range(self.pixel_num):
+            critical_transforms = deepcopy(image_to_world_transform_criticals)
+            if ((angle - delta_phi) < self.angle_to_x_axis[j]) and ((angle + delta_phi) > self.angle_to_x_axis[j]):
+                critical_transforms.append(self._compute_transform(offset-delta_x, self.angle_to_x_axis[j]))
+                critical_transforms.append(self._compute_transform(offset+delta_x, self.angle_to_x_axis[j]))
+            for i in range(self.pixel_num):
+                if i < self.pixel_num/2:
+                    image_matrix[i][j] = self.scene.get_sky_intensity()
+                    lower_bound_matrix[i][j] = image_matrix[i][j]
+                    upper_bound_matrix[i][j] = image_matrix[i][j]
+                else:
+                    # Find intersection point of the ray with the world
+                    intersection_point = self._image_to_world(i, j, image_to_world_transform_center)
+                    # Query intensity value from Scene
+                    image_matrix[i][j] = self.scene.get_intensity_at_point(intersection_point[0], intersection_point[1]) # i is row index, j is column index
+
+                    # Find the critical intersection points with the world
+                    critical_intersections = [self._image_to_world(i, j, transform) for transform in critical_transforms]
+                    xs_critical = [p[0] for p in critical_intersections]
+                    (min_val, max_val) = self.scene.get_intensity_range(min(xs_critical), max(xs_critical))
+                    lower_bound_matrix[i][j] = min_val
+                    upper_bound_matrix[i][j] = max_val
+        image_matrix = self._quantize_image(image_matrix)
+        lower_bound_matrix = self._quantize_image(lower_bound_matrix)
+        upper_bound_matrix = self._quantize_image(upper_bound_matrix)
+        return image_matrix, lower_bound_matrix, upper_bound_matrix
+
+    def _compute_angle_to_x_axis(self):
+        # For each column of pixels, compute the angle that needs for it to rotate to align with x axis. This is used for computing critical points in determining the intensity range
+        angle_to_x_axis = []
+        common_term = self.pixel_size/2 - self.pixel_num*self.pixel_size/2
+        for j in range(self.pixel_num):
+            if j < (self.pixel_num/2):
+                angle_to_x_axis.append(90 + np.degrees(np.arctan((common_term + j*self.pixel_size)/self.focal_length)))
+            else:
+                angle_to_x_axis.append(-90 + np.degrees(np.arctan((common_term + j*self.pixel_size)/self.focal_length)))
+        return angle_to_x_axis
 
     def _compute_transform(self, offset, angle):
         # Compute the transform matrix from image coordinate to world coordinate

@@ -22,12 +22,21 @@ def main():
     viewer = image_generator.Viewer(camera_params, scene)
     offset = 30.0
     angle = 0.0
-    image_taken = viewer.take_picture(offset, angle)
+    #image_taken = viewer.take_picture(offset, angle)
+
+    delta_x = 2.0
+    delta_phi = 1.0
+    image_matrix, lower_bound_matrix, upper_bound_matrix = viewer.take_picture_with_range(offset, angle, delta_x, delta_phi)
     # Don't need the following to generate data, just visualization. There is potentially a alias in converting/displaying as jpeg
-    img = Image.fromarray(image_taken)
+    img = Image.fromarray(image_matrix)
     img = img.convert("L")
     img.save('test.jpg')
-
+    img_low = Image.fromarray(lower_bound_matrix)
+    img_low = img_low.convert("L")
+    img_low.save('test_low.jpg')
+    img_upper = Image.fromarray(upper_bound_matrix)
+    img_upper = img_upper.convert("L")
+    img_upper.save('test_upper.jpg')
 
 
 if __name__ == '__main__':
