@@ -20,9 +20,10 @@ camera_params = {
 def main():
     scene = image_generator.Scene(scene_params)
     viewer = image_generator.Viewer(camera_params, scene)
-    offset = 50.0
-    angle = 15.0
+    offset = 30.0
+    angle = 0.0
     image_taken = viewer.take_picture(offset, angle)
+    # Don't need the following to generate data, just visualization. There is potentially a alias in converting/displaying as jpeg
     img = Image.fromarray(image_taken)
     img = img.convert("L")
     img.save('test.jpg')

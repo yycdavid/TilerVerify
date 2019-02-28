@@ -33,7 +33,7 @@ class Scene:
     def get_intensity_at_point(self, x, y):
         if x<0:
             x = -x # Scene is symmetric
-        if x > self.x6 or (x>self.x2 and x<self.x3):
+        if x >= self.x6 or (x>=self.x2 and x<=self.x3):
             return self.road_intensity
         elif x > self.x5:
             return self._interpolate(self.x5, self.side_line_intensity, self.x6, self.road_intensity, x)
@@ -87,16 +87,16 @@ class Viewer:
 
     def _compute_transform(self, offset, angle):
         # Compute the transform matrix from image coordinate to world coordinate
-        transform_mtrx = np.zeros((4,3))
         theta = np.deg2rad(angle)
-        transform_mtrx[0][0] = offset * self.pixel_size
-        transform_mtrx[0][1] = self.height * self.pixel_size * np.cos(theta)
-        common_term = - self.pixel_num*self.pixel_size/2 + self.pixel_size/2
-        transform_mtrx[0][2] = self.height * (np.cos(theta) * (offset + common_term) - offset - self.focal_length * np.sin(theta)) + offset * common_term
-        transform_mtrx[1][1] = self.height * self.pixel_size * np.sin(theta)
-        transform_mtrx[1][2] = self.height * (np.sin(theta) * (offset + common_term) + self.focal_length * np.cos(theta))
-        transform_mtrx[3][0] = self.pixel_size
-        transform_mtrx[3][2] = common_term
+        common_term = self.pixel_size/2 - self.pixel_num*self.pixel_size/2
+        # Pixel coordinate to coordinate centered at focal point
+        pixel_to_focal = np.array([[0,self.pixel_size,common_term],[0,0,self.focal_length],[-self.pixel_size,0,-common_term],[0,0,1]])
+        rotation = np.array([[np.cos(theta), -np.sin(theta),0,0], [np.sin(theta), np.cos(theta),0,0], [0,0,1,0], [0,0,0,1]]) # Rotation in the focal coordinate
+        projection = np.array([[-self.height,0,0,0], [0,-self.height,0,0], [0,0,-self.height,0], [0,0,1,0]]) # Project each pixel to the ground plane
+        focal_to_world = np.eye(4)
+        focal_to_world[0,3] = offset
+        focal_to_world[2,3] = self.height
+        transform_mtrx = np.matmul(focal_to_world, np.matmul(projection, np.matmul(rotation, pixel_to_focal)))
         return transform_mtrx
 
     def _image_to_world(self, i, j, transform):
