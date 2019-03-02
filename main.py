@@ -13,8 +13,8 @@ scene_params = {
 camera_params = {
 'height': 150.0,
 'focal_length': 5.0,
-'pixel_num': 256,
-'pixel_size': 0.1,
+'pixel_num': 32,
+'pixel_size': 0.8,
 }
 
 def main():
@@ -28,6 +28,8 @@ def main():
     delta_phi = 1.0
     image_matrix, lower_bound_matrix, upper_bound_matrix = viewer.take_picture_with_range(offset, angle, delta_x, delta_phi)
     # Don't need the following to generate data, just visualization. There is potentially a alias in converting/displaying as jpeg
+    # Store training images as np array (N, H, W) with range [0,255], offsets and angles as (N,)
+    # Store pixel ranges as np array with range (0,1.0)
     img = Image.fromarray(image_matrix)
     img = img.convert("L")
     img.save('test.jpg')
