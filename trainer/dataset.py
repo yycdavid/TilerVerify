@@ -28,4 +28,4 @@ class RoadSceneDataset(torch.utils.data.Dataset):
         angle = self.angles[ix]
         if self.transform:
             image = self.transform(image)
-        return code, docstring, fake_code
+        return image, offset, angle

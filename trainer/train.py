@@ -1,42 +1,41 @@
 import argparse
 import torch.optim as optim
 from torchvision import datasets, transforms
+import os
 
 from model import CNN_small
 from dataset import RoadSceneDataset
 
+outputManager = 0
+RESULTS_ROOT = 'trained_models'
+MAX_NON_IMPROVING_EPOCHS = 10
 
 def train(args, model, device, train_loader, optimizer, epoch):
     model.train()
-    for batch_idx, (data, target) in enumerate(train_loader):
-        data, target = data.to(device), target.to(device)
+    for batch_idx, (images, offsets, angles) in enumerate(train_loader):
+        images, offsets, angles = images.to(device), offsets.to(device), angles.to(device)
         optimizer.zero_grad()
-        output = model(data)
-        loss = F.nll_loss(output, target)
+        output = model(images)
+        loss = F.l1_loss(output, torch.cat([offsets, angles], dim=1))
         loss.backward()
         optimizer.step()
         if batch_idx % args.log_interval == 0:
-            print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
+            outputManager.say('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
                 epoch, batch_idx * len(data), len(train_loader.dataset),
                 100. * batch_idx / len(train_loader), loss.item()))
 
 def test(args, model, device, test_loader):
     model.eval()
     test_loss = 0
-    correct = 0
     with torch.no_grad():
-        for data, target in test_loader:
-            data, target = data.to(device), target.to(device)
-            output = model(data)
-            test_loss += F.nll_loss(output, target, reduction='sum').item() # sum up batch loss
-            pred = output.argmax(dim=1, keepdim=True) # get the index of the max log-probability
-            correct += pred.eq(target.view_as(pred)).sum().item()
+        for images, offsets, angles in test_loader:
+            images, offsets, angles = images.to(device), offsets.to(device), angles.to(device)
+            output = model(images)
+            test_loss += F.l1_loss(output, torch.cat([offsets, angles], dim=1), reduction='sum').item() # sum up batch loss
 
-    test_loss /= len(test_loader.dataset)
-
-    print('\nTest set: Average loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)\n'.format(
-        test_loss, correct, len(test_loader.dataset),
-        100. * correct / len(test_loader.dataset)))
+    test_loss /= (2*len(test_loader.dataset))
+    outputManager.say('\nTest set: Average loss: {:.4f}\n'.format(test_loss)
+    return test_loss
 
 def get_args():
     parser = argparse.ArgumentParser(description='Training model for the synthetic road scene')
@@ -60,6 +59,7 @@ def get_args():
                         help='how many batches to wait before logging training status')
     parser.add_argument('--save-model', action='store_true', default=False,
                         help='For Saving the current Model')
+    parser.add_argument('--result', type=string, help='Folder name to store result')
 
     return parser.parse_args()
 
@@ -76,6 +76,17 @@ def load_data(data_dir):
 
 def main():
     args = get_args()
+    # Create folder to store results for this experiment
+    base_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+    result_root = os.path.join(base_dir, RESULTS_ROOT)
+    if not os.path.exists(result_root):
+        print("Creating {}".format(result_root))
+        os.makedirs(result_root)
+    result_dir = os.path.join(result_root, args.result)
+    utils.create_dir(result_dir)
+    global outputManager
+    outputManager = utils.OutputManager(result_dir)
+
     use_cuda = args.cuda and torch.cuda.is_available()
     torch.manual_seed(args.seed)
     device = torch.device("cuda" if use_cuda else "cpu")
@@ -93,18 +104,31 @@ def main():
     model = CNN_small().to(device)
     optimizer = optim.Adam(model.parameters(), lr=args.lr)
 
-    # TODO, starts here
+    best_epoch = 0
     for epoch in range(1, args.epochs + 1):
+        if (epoch - best_epoch) > MAX_NON_IMPROVING_EPOCHS:
+            break
         train(args, model, device, train_loader, optimizer, epoch)
-        test(args, model, device, test_loader)
+        eval_loss = test(args, model, device, eval_loader)
+        if best_valid_loss is None or eval_loss < best_valid_loss:
+            outputManager.say(
+                "Found better model ({} < {}) @ epoch {}".format(
+                    eval_loss,
+                    best_valid_loss,
+                    epoch,
+                )
+            )
+            best_valid_loss = loss
+            best_epoch = epoch
+            outputManager.say('Saving the current model...')
+            torch.save(model.state_dict(), "best_model.pt")
 
-    if (args.save_model):
-        torch.save(model.state_dict(),"mnist_cnn.pt")
+    outputManager.say('Training finished. The best model is @ epoch {}'.format(best_epoch))
 
 if __name__ == '__main__':
     try:
         main()
     except Exception as err:
-        print(err)
+        outputManager.say(err)
         import pdb
         pdb.set_trace()
