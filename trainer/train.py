@@ -107,8 +107,11 @@ def main():
 
     model = CNN_small().to(device)
     optimizer = optim.Adam(model.parameters(), lr=args.lr)
-    # TODO: add log config
-    
+    # log configuration
+    with open(os.path.join(result_dir, 'config.txt'), 'w') as f:
+        f.write(model.__repr__())
+        f.write('Input dimension: {}'.format(train_data['images'][0].shape))
+
     best_epoch = 0
     best_valid_loss = None
     for epoch in range(1, args.epochs + 1):
