@@ -1,2 +1,4 @@
 *.jpg
 *.pyc
+data/
+trained_models/

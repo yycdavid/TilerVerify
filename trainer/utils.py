@@ -6,9 +6,9 @@ class OutputManager(object):
         self.log_file = open(os.path.join(result_path,'log.txt'),'w')
 
     def say(self, s):
-        self.log_file.write("{}".format(s))
+        self.log_file.write("{}\n".format(s))
         self.log_file.flush()
-        sys.stdout.write("{}".format(s))
+        sys.stdout.write("{}\n".format(s))
         sys.stdout.flush()
 
 def create_dir(dir_path):

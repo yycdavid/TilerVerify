@@ -2,6 +2,8 @@ import os
 import image_generator
 from PIL import Image
 import numpy as np
+import pickle
+from tqdm import tqdm
 
 # Unit centimeters
 scene_params = {
@@ -17,13 +19,54 @@ camera_params = {
 'pixel_size': 0.8,
 }
 
+def generate_dataset(viewer, num_images, offset_range, angle_range):
+    # offset_range and angle_range are list, [low, high]
+    offsets = np.random.uniform(low=offset_range[0], high=offset_range[1], size=num_images)
+    angles = np.random.uniform(low=angle_range[0], high=angle_range[1], size=num_images)
+    images = []
+    for i in tqdm(range(num_images)):
+        images.append(np.expand_dims(viewer.take_picture(offsets[i], angles[i]), axis=0))
+    images = np.concatenate(images, axis=0)
+    dataset = {}
+    dataset['images'] = images
+    dataset['offsets'] = offsets
+    dataset['angles'] = angles
+    return dataset
+
 def main():
     scene = image_generator.Scene(scene_params)
     viewer = image_generator.Viewer(camera_params, scene)
-    offset = 30.0
-    angle = 0.0
-    #image_taken = viewer.take_picture(offset, angle)
 
+    '''
+    # Generate training and validation dataset
+    offset_range = [-150, 150]
+    angle_range = [-60, 60]
+    training_size = 1000
+    validation_size = 200
+    training_set = generate_dataset(viewer, training_size, offset_range, angle_range)
+    validation_set = generate_dataset(viewer, validation_size, offset_range, angle_range)
+
+    data_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'data')
+    if not os.path.exists(data_dir):
+        print("Creating {}".format(data_dir))
+        os.makedirs(data_dir)
+    with open(os.path.join(data_dir, 'train.bin'), 'wb') as f:
+        pickle.dump(training_set, f)
+    with open(os.path.join(data_dir, 'valid.bin'), 'wb') as f:
+        pickle.dump(validation_set, f)
+    '''
+
+
+    # Generate a picture
+    offset = -102.0
+    angle = 60.0
+    image_taken = viewer.take_picture(offset, angle)
+
+    img = Image.fromarray(image_taken)
+    img = img.convert("L")
+    img.save('test.jpg')
+
+    '''# Generate a picture with range
     delta_x = 2.0
     delta_phi = 1.0
     image_matrix, lower_bound_matrix, upper_bound_matrix = viewer.take_picture_with_range(offset, angle, delta_x, delta_phi)
@@ -39,6 +82,7 @@ def main():
     img_upper = Image.fromarray(upper_bound_matrix)
     img_upper = img_upper.convert("L")
     img_upper.save('test_upper.jpg')
+    '''
 
 
 if __name__ == '__main__':
@@ -47,4 +91,4 @@ if __name__ == '__main__':
     except Exception as err:
         print(err)
         import pdb
-        pdb.set_trace()
+        pdb.post_mortem()

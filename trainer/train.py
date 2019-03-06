@@ -1,7 +1,12 @@
 import argparse
+import torch
 import torch.optim as optim
 from torchvision import datasets, transforms
 import os
+import pickle
+import utils
+from PIL import Image
+import torch.nn.functional as F
 
 from model import CNN_small
 from dataset import RoadSceneDataset
@@ -16,12 +21,12 @@ def train(args, model, device, train_loader, optimizer, epoch):
         images, offsets, angles = images.to(device), offsets.to(device), angles.to(device)
         optimizer.zero_grad()
         output = model(images)
-        loss = F.l1_loss(output, torch.cat([offsets, angles], dim=1))
+        loss = F.l1_loss(output, torch.cat([offsets.unsqueeze(1), angles.unsqueeze(1)], dim=1))
         loss.backward()
         optimizer.step()
         if batch_idx % args.log_interval == 0:
             outputManager.say('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
-                epoch, batch_idx * len(data), len(train_loader.dataset),
+                epoch, batch_idx * len(offsets), len(train_loader.dataset),
                 100. * batch_idx / len(train_loader), loss.item()))
 
 def test(args, model, device, test_loader):
@@ -31,16 +36,16 @@ def test(args, model, device, test_loader):
         for images, offsets, angles in test_loader:
             images, offsets, angles = images.to(device), offsets.to(device), angles.to(device)
             output = model(images)
-            test_loss += F.l1_loss(output, torch.cat([offsets, angles], dim=1), reduction='sum').item() # sum up batch loss
+            test_loss += F.l1_loss(output, torch.cat([offsets.unsqueeze(1), angles.unsqueeze(1)], dim=1), reduction='sum').item() # sum up batch loss
 
     test_loss /= (2*len(test_loader.dataset))
-    outputManager.say('\nTest set: Average loss: {:.4f}\n'.format(test_loss)
+    outputManager.say('\nTest set: Average loss: {:.4f}\n'.format(test_loss))
     return test_loss
 
 def get_args():
     parser = argparse.ArgumentParser(description='Training model for the synthetic road scene')
     # Training settings
-    parser.add_argument('--data', type=string, help='Path to training and evaluation data')
+    parser.add_argument('--data', type=str, help='Path to training and evaluation data')
     parser.add_argument('--batch-size', type=int, default=64, metavar='N',
                         help='input batch size for training (default: 64)')
     parser.add_argument('--eval-batch-size', type=int, default=1000, metavar='N',
@@ -57,25 +62,22 @@ def get_args():
                         help='random seed (default: 1)')
     parser.add_argument('--log-interval', type=int, default=10, metavar='N',
                         help='how many batches to wait before logging training status')
-    parser.add_argument('--save-model', action='store_true', default=False,
-                        help='For Saving the current Model')
-    parser.add_argument('--result', type=string, help='Folder name to store result')
+    parser.add_argument('--result', type=str, help='Folder name to store result')
 
     return parser.parse_args()
 
 def load_data(data_dir):
     # Load training and evaluation data
-    # TODO
-    train_data['images']
-    train_data['offsets']
-    train_data['angles']
-    eval_data['images']
-    eval_data['offsets']
-    eval_data['angles']
+    with open(os.path.join(data_dir, 'train.bin'), 'rb') as f:
+        train_data = pickle.load(f)
+    with open(os.path.join(data_dir, 'valid.bin'), 'rb') as f:
+        eval_data = pickle.load(f)
     return train_data, eval_data
 
 def main():
     args = get_args()
+    assert args.data is not None, 'Need to specify data directory'
+    assert args.result is not None, 'Need to specify result directory'
     # Create folder to store results for this experiment
     base_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
     result_root = os.path.join(base_dir, RESULTS_ROOT)
@@ -91,7 +93,9 @@ def main():
     torch.manual_seed(args.seed)
     device = torch.device("cuda" if use_cuda else "cpu")
 
-    train_data, eval_data = load_data(args.data)
+    data_dir = os.path.join(base_dir, args.data)
+    train_data, eval_data = load_data(data_dir)
+
     train_dataset = RoadSceneDataset(train_data['images'], train_data['offsets'], train_data['angles'])
     eval_dataset = RoadSceneDataset(eval_data['images'], eval_data['offsets'], eval_data['angles'])
     train_loader = torch.utils.data.DataLoader(
@@ -103,8 +107,10 @@ def main():
 
     model = CNN_small().to(device)
     optimizer = optim.Adam(model.parameters(), lr=args.lr)
-
+    # TODO: add log config
+    
     best_epoch = 0
+    best_valid_loss = None
     for epoch in range(1, args.epochs + 1):
         if (epoch - best_epoch) > MAX_NON_IMPROVING_EPOCHS:
             break
@@ -118,10 +124,10 @@ def main():
                     epoch,
                 )
             )
-            best_valid_loss = loss
+            best_valid_loss = eval_loss
             best_epoch = epoch
             outputManager.say('Saving the current model...')
-            torch.save(model.state_dict(), "best_model.pt")
+            torch.save(model.state_dict(), os.path.join(result_dir, "best_model.pt"))
 
     outputManager.say('Training finished. The best model is @ epoch {}'.format(best_epoch))
 
@@ -129,6 +135,6 @@ if __name__ == '__main__':
     try:
         main()
     except Exception as err:
-        outputManager.say(err)
+        print(err)
         import pdb
-        pdb.set_trace()
+        pdb.post_mortem()
