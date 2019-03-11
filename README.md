@@ -7,8 +7,13 @@ Highest level system:
 
 - Model training (Pytorch)
     - Core function: train a model with the synthetic data, potentially need adversarial training. In addition, output the trained model parameters to a format usable by MILP system
-    -
 
 - MILP evaluation (Julia)
     - Core function: Take in a trained model, a set of test points with range, produce a max error for each test point
 
+TODO:
+- Export model parameters and dataset using the format compatible with MIPVerify
+- Write the dataset importing code in MIPVerify, with different range for different input entry
+- Write a new constraint with different range for different input entry
+- Write a new objective for our task
+- Experiment
