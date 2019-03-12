@@ -13,7 +13,7 @@ using DataFrames
 const dependencies_path = joinpath(Pkg.dir("MIPVerify"), "deps")
 const root_path = dirname(dirname(@__DIR__))
 
-export find_adversarial_example, frac_correct, interval_arithmetic, lp, mip
+export find_adversarial_example, frac_correct, average_error_across_labels, interval_arithmetic, lp, mip
 
 @enum TighteningAlgorithm interval_arithmetic=1 lp=2 mip=3
 @enum AdversarialExampleObjective closest=1 worst=2
@@ -158,6 +158,10 @@ function get_label(y::Array{<:Real, 1}, test_index::Integer)::Int
     return y[test_index]
 end
 
+function get_regr_ground_truth(y::Array{<:Real, 1}, test_index::Integer)::Real
+    return y[test_index]
+end
+
 function get_image(x::Array{T, 4}, test_index::Integer)::Array{T, 4} where {T<:Real}
     return x[test_index:test_index, :, :, :]
 end
@@ -190,6 +194,24 @@ function frac_correct(
         end
     end
     return num_correct / num_samples
+end
+
+function average_error_across_labels(
+    nn::NeuralNet,
+    dataset::DoubleLabeledImageDataset,
+    num_samples::Integer)::Real
+
+    accumulate_error = 0.0
+    num_samples = min(num_samples, MIPVerify.num_samples(dataset))
+    @showprogress 1 "Computing average error..." for sample_index in 1:num_samples
+        x0 = get_image(dataset.images, sample_index)
+        actual_offset = get_regr_ground_truth(dataset.offsets, sample_index)
+        actual_angle = get_regr_ground_truth(dataset.angles, sample_index)
+        predicted = x0 |> nn
+        accumulate_error += abs(predicted[1] - actual_offset)
+        accumulate_error += abs(predicted[2] - actual_angle)
+    end
+    return accumulate_error / (2*num_samples)
 end
 
 

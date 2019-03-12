@@ -9,9 +9,10 @@ MIPVerify.setloglevel!("info")
 
 # primarily meant as a sanity check.
 # note that determining the fraction correct for is highly inefficient, and can be very slow for large networks!
-println("Fraction correct of first 1000 is $(frac_correct(nnparams, mnist.test, 1000))")
+println("Average error of first 200 is $(average_error_across_labels(nnparams, test_dataset, 200))")
 # Fraction of first 1000 correct is expected to be 0.98
 
+"""
 MIPVerify.batch_find_untargeted_attack(
     nnparams,
     mnist.test,
@@ -26,3 +27,4 @@ MIPVerify.batch_find_untargeted_attack(
     cache_model=false,
     solve_if_predicted_in_targeted=false,
 )
+"""

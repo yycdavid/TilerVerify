@@ -15,12 +15,12 @@ class Flatten(nn.Module):
 
 # cnn_small_torch corresponds to CNN_small in model.py
 cnn_small_torch = nn.Sequential(OrderedDict([
-        ('conv1', nn.Conv2d(1, 16, 4, stride=2)),
+        ('conv1', nn.Conv2d(1, 16, 4, stride=2, padding=1)),
         ('relu1', nn.ReLU()),
-        ('conv2', nn.Conv2d(16, 32, 4, stride=2)),
+        ('conv2', nn.Conv2d(16, 32, 4, stride=2, padding=1)),
         ('relu2', nn.ReLU()),
         ('flatten', Flatten()),
-        ('fc1', nn.Linear(6*6*32, 100)),
+        ('fc1', nn.Linear(8*8*32, 100)),
         ('relu3', nn.ReLU()),
         ('fc2', nn.Linear(100, 2))
     ]))

@@ -70,7 +70,7 @@ function get_custom_network_params(model_name::String, exp_name::String)::Neural
         param_dict = matread(joinpath(root_path, "trained_models", exp_name, "converted.mat"))
         conv1 = get_conv_params(param_dict, "conv1", (4, 4, 1, 16), expected_stride = 2)
         conv2 = get_conv_params(param_dict, "conv2", (4, 4, 16, 32), expected_stride = 2)
-        fc1 = get_matrix_params(param_dict, "fc1", (6*6*32, 100))
+        fc1 = get_matrix_params(param_dict, "fc1", (8*8*32, 100))
         fc2 = get_matrix_params(param_dict, "fc2", (100, 2))
 
         nn = Sequential([
