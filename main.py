@@ -34,6 +34,40 @@ def generate_dataset(viewer, num_images, offset_range, angle_range):
     dataset['angles'] = angles
     return dataset
 
+def generate_dataset_for_verify(viewer, offset_range, angle_range, offset_grid_num, angle_grid_num):
+    # offset_range and angle_range are list, [low, high]
+    offset_grid_size = (offset_range[1] - offset_range[0])/offset_grid_num
+    angle_grid_size = (angle_range[1] - angle_range[0])/angle_grid_num
+    offset_delta = offset_grid_size / 2
+    angle_delta = angle_grid_size / 2
+    image_lower_bounds = []
+    image_upper_bounds = []
+    offset_lower_bounds = []
+    offset_upper_bounds = []
+    angle_lower_bounds = []
+    angle_upper_bounds = []
+    for i in tqdm(range(offset_grid_num)):
+        offset = offset_range[0] + i * offset_grid_size + offset_delta
+        for j in range(angle_grid_num):
+            angle = angle_range[0] + j * angle_grid_size + angle_delta
+            _, lower_bound_matrix, upper_bound_matrix = viewer.take_picture_with_range(offset, angle, offset_delta, angle_delta)
+            image_lower_bounds.append(np.expand_dims(lower_bound_matrix, axis=0))
+            image_upper_bounds.append(np.expand_dims(upper_bound_matrix, axis=0))
+            offset_lower_bounds.append(offset - offset_delta)
+            offset_upper_bounds.append(offset + offset_delta)
+            angle_lower_bounds.append(angle - angle_delta)
+            angle_upper_bounds.append(angle + angle_delta)
+
+    dataset = {}
+    dataset['image_lower_bounds'] = np.concatenate(image_lower_bounds, axis=0) # (N, H, W)
+    dataset['image_upper_bounds'] = np.concatenate(image_upper_bounds, axis=0) # (N, H, W)
+    dataset['offset_lower_bounds'] = np.array(offset_lower_bounds) # (N,)
+    dataset['offset_upper_bounds'] = np.array(offset_upper_bounds) # (N,)
+    dataset['angle_lower_bounds'] = np.array(angle_lower_bounds) # (N,)
+    dataset['angle_upper_bounds'] = np.array(angle_upper_bounds) # (N,)
+    import pdb; pdb.set_trace()
+    return dataset
+
 def main():
     scene = image_generator.Scene(scene_params)
     viewer = image_generator.Viewer(camera_params, scene)
@@ -55,7 +89,19 @@ def main():
     sio.savemat(os.path.join(data_dir, 'valid.mat'), validation_set)
     '''
 
+    # Generate a test set for verify
+    offset_range = [-30, 30]
+    angle_range = [-10, 10]
+    offset_grid_num = 60
+    angle_grid_num = 20
+    dataset = generate_dataset_for_verify(viewer, offset_range, angle_range, offset_grid_num, angle_grid_num)
+    data_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'data')
+    if not os.path.exists(data_dir):
+        print("Creating {}".format(data_dir))
+        os.makedirs(data_dir)
+    sio.savemat(os.path.join(data_dir, 'test_verify.mat'), dataset)
 
+    '''
     # Generate a picture
     offset = -102.0
     angle = 60.0
@@ -64,6 +110,7 @@ def main():
     img = Image.fromarray(image_taken)
     img = img.convert("L")
     img.save('test.jpg')
+    '''
 
     '''# Generate a picture with range
     delta_x = 2.0
