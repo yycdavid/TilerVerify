@@ -4,6 +4,7 @@ from PIL import Image
 import numpy as np
 import pickle
 from tqdm import tqdm
+import scipy.io as sio
 
 # Unit centimeters
 scene_params = {
@@ -26,7 +27,7 @@ def generate_dataset(viewer, num_images, offset_range, angle_range):
     images = []
     for i in tqdm(range(num_images)):
         images.append(np.expand_dims(viewer.take_picture(offsets[i], angles[i]), axis=0))
-    images = np.concatenate(images, axis=0)
+    images = np.concatenate(images, axis=0) # (N, H, W)
     dataset = {}
     dataset['images'] = images
     dataset['offsets'] = offsets
@@ -50,10 +51,8 @@ def main():
     if not os.path.exists(data_dir):
         print("Creating {}".format(data_dir))
         os.makedirs(data_dir)
-    with open(os.path.join(data_dir, 'train.bin'), 'wb') as f:
-        pickle.dump(training_set, f)
-    with open(os.path.join(data_dir, 'valid.bin'), 'wb') as f:
-        pickle.dump(validation_set, f)
+    sio.savemat(os.path.join(data_dir, 'train.mat'), training_set)
+    sio.savemat(os.path.join(data_dir, 'valid.mat'), validation_set)
     '''
 
 

@@ -3,7 +3,7 @@ using MIPVerify
 using Gurobi
 
 nnparams = get_custom_network_params("CNN_small", "test_run")
-mnist = read_datasets("mnist")
+test_dataset = read_custom_test_dataset("data/valid.mat")
 
 MIPVerify.setloglevel!("info")
 

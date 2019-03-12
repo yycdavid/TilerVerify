@@ -1,6 +1,6 @@
 using MAT
 
-export read_datasets
+export read_datasets, read_custom_test_dataset
 
 abstract type Dataset end
 
@@ -9,7 +9,7 @@ abstract type LabelledDataset<:Dataset end
 """
 $(TYPEDEF)
 
-Dataset of images stored as a 4-dimensional array of size `(num_samples, image_height, 
+Dataset of images stored as a 4-dimensional array of size `(num_samples, image_height,
 image_width, num_channels)`, with accompanying labels (sorted in the same order) of size
 `num_samples`.
 """
@@ -48,6 +48,45 @@ function Base.show(io::IO, dataset::LabelledImageDataset)
     )
 end
 
+struct DoubleLabeledImageDataset{T<:Real, U<:Real, V<:Real}
+    images::Array{T, 4}
+    offsets::Array{U, 1}
+    angles::Array{V, 1}
+
+    function DoubleLabeledImageDataset{T, U, V}(images::Array{T, 4}, offsets::Array{U, 1}, angles::Array{V, 1})::DoubleLabeledImageDataset where {T<:Real, U<:Real, V<:Real}
+        (num_image_samples, image_height, image_width, num_channels) = size(images)
+        (num_offset_samples, ) = size(offsets)
+        (num_angle_samples, ) = size(angles)
+        @assert num_image_samples==num_offset_samples
+        @assert num_offset_samples==num_angle_samples
+        return new(images, offsets, angles)
+    end
+end
+
+function DoubleLabeledImageDataset(images::Array{T, 4}, offsets::Array{U, 1}, angles::Array{V, 1})::DoubleLabeledImageDataset where {T<:Real, U<:Real, V<:Real}
+    DoubleLabeledImageDataset{T, U, V}(images, offsets, angles)
+end
+
+function num_samples(dataset::DoubleLabeledImageDataset)
+    return length(dataset.offsets)
+end
+
+function Base.show(io::IO, dataset::DoubleLabeledImageDataset)
+    image_size = size(dataset.images[1, :, :, :])
+    num_samples = MIPVerify.num_samples(dataset)
+    min_pixel = minimum(dataset.images)
+    max_pixel = maximum(dataset.images)
+    min_offset = minimum(dataset.offsets)
+    max_offset = maximum(dataset.offsets)
+    min_angle = minimum(dataset.angles)
+    max_angle = maximum(dataset.angles)
+    print(io,
+        "{DoubleLabeledImageDataset}",
+        "\n    `images`: $num_samples images of size $image_size, with pixels in [$min_pixel, $max_pixel].",
+        "\n    `offsets, angles`: $num_samples corresponding labels, offsets in [$min_offset, $max_offset] and angles in [$min_angle, $max_angle]."
+    )
+end
+
 """
 $(TYPEDEF)
 
@@ -60,7 +99,7 @@ struct NamedTrainTestDataset{T<:Dataset, U<:Dataset} <: Dataset
     """
     Name of dataset.
     """
-    name::String 
+    name::String
     """
     Training set.
     """
@@ -73,7 +112,7 @@ struct NamedTrainTestDataset{T<:Dataset, U<:Dataset} <: Dataset
 end
 
 function Base.show(io::IO, dataset::NamedTrainTestDataset)
-    print(io, 
+    print(io,
         "$(dataset.name):",
         "\n  `train`: $(dataset.train)",
         "\n  `test`: $(dataset.test)"
@@ -105,4 +144,13 @@ function read_datasets(name::String)::NamedTrainTestDataset
     else
         throw(DomainError("Dataset $name not supported."))
     end
+end
+
+function read_custom_test_dataset(relative_path::String)::DoubleLabeledImageDataset
+    # Argument is the relative path of the .mat file to the root directory of the repo
+    # Stored data images does not have the channel dimension. So here add it
+    absolute_path = joinpath(root_path, relative_path)
+    test_data = matread(absolute_path)
+    test_data["images"] = reshape(test_data["images"], (size(test_data["images"])...,1))
+    return DoubleLabeledImageDataset(test_data["images"]/255, test_data["offsets"][:], test_data["angles"][:])
 end
