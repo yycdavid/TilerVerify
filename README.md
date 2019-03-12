@@ -17,3 +17,9 @@ TODO:
 - Write a new constraint with different range for different input entry
 - Write a new objective for our task
 - Experiment
+
+
+To verify a new network:
+1. Add the model in trainer/model.py, and train it
+2. Add the model in trainer/convert_for_milp.py, and convert the trained model into correct format for MIPVerify
+3. 

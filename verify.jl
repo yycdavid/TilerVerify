@@ -2,7 +2,7 @@ include("./MIPVerify/src/MIPVerify.jl")
 using MIPVerify
 using Gurobi
 
-nnparams = get_example_network_params("MNIST.WK17a_linf0.1_authors")
+nnparams = get_custom_network_params("CNN_small", "test_run")
 mnist = read_datasets("mnist")
 
 MIPVerify.setloglevel!("info")
@@ -15,7 +15,7 @@ println("Fraction correct of first 1000 is $(frac_correct(nnparams, mnist.test, 
 MIPVerify.batch_find_untargeted_attack(
     nnparams,
     mnist.test,
-    1:10000, 
+    1:10000,
     GurobiSolver(Gurobi.Env(), BestObjStop=0.1, TimeLimit=1200),
     pp = MIPVerify.LInfNormBoundedPerturbationFamily(0.1),
     norm_order=Inf,
