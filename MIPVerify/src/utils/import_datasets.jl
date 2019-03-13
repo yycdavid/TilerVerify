@@ -1,6 +1,6 @@
 using MAT
 
-export read_datasets, read_custom_test_dataset
+export read_datasets, read_custom_test_dataset, read_custom_dataset_with_range
 
 abstract type Dataset end
 
@@ -48,6 +48,8 @@ function Base.show(io::IO, dataset::LabelledImageDataset)
     )
 end
 
+# DoubleLabeledImageDataset is the testset for checking ordinary performance of the model
+
 struct DoubleLabeledImageDataset{T<:Real, U<:Real, V<:Real}
     images::Array{T, 4}
     offsets::Array{U, 1}
@@ -84,6 +86,44 @@ function Base.show(io::IO, dataset::DoubleLabeledImageDataset)
         "{DoubleLabeledImageDataset}",
         "\n    `images`: $num_samples images of size $image_size, with pixels in [$min_pixel, $max_pixel].",
         "\n    `offsets, angles`: $num_samples corresponding labels, offsets in [$min_offset, $max_offset] and angles in [$min_angle, $max_angle]."
+    )
+end
+
+
+# RangeDataset is the testset for computing maximum error
+
+struct RangeDataset{T<:Real, U<:Real, V<:Real}
+    image_lower_bounds::Array{T, 4}
+    image_upper_bounds::Array{T, 4}
+    offset_lower_bounds::Array{U, 1}
+    offset_upper_bounds::Array{U, 1}
+    angle_lower_bounds::Array{V, 1}
+    angle_upper_bounds::Array{V, 1}
+
+    function RangeDataset{T, U, V}(image_lower_bounds::Array{T, 4}, image_upper_bounds::Array{T, 4}, offset_lower_bounds::Array{U, 1}, offset_upper_bounds::Array{U, 1}, angle_lower_bounds::Array{V, 1}, angle_upper_bounds::Array{V, 1})::RangeDataset where {T<:Real, U<:Real, V<:Real}
+        return new(image_lower_bounds, image_upper_bounds, offset_lower_bounds, offset_upper_bounds, angle_lower_bounds, angle_upper_bounds)
+    end
+end
+
+function RangeDataset(image_lower_bounds::Array{T, 4}, image_upper_bounds::Array{T, 4}, offset_lower_bounds::Array{U, 1}, offset_upper_bounds::Array{U, 1}, angle_lower_bounds::Array{V, 1}, angle_upper_bounds::Array{V, 1})::RangeDataset where {T<:Real, U<:Real, V<:Real}
+    RangeDataset{T, U, V}(image_lower_bounds, image_upper_bounds, offset_lower_bounds, offset_upper_bounds, angle_lower_bounds, angle_upper_bounds)
+end
+
+function num_samples(dataset::RangeDataset)
+    return length(dataset.offset_lower_bounds)
+end
+
+function Base.show(io::IO, dataset::RangeDataset)
+    image_size = size(dataset.image_lower_bounds[1, :, :, :])
+    num_samples = MIPVerify.num_samples(dataset)
+    min_offset = minimum(dataset.offset_lower_bounds)
+    max_offset = maximum(dataset.offset_upper_bounds)
+    min_angle = minimum(dataset.angle_lower_bounds)
+    max_angle = maximum(dataset.angle_upper_bounds)
+    print(io,
+        "{RangeDataset}",
+        "\n    `image_lower_bounds, image_upper_bounds`: $num_samples test points, image size $image_size.",
+        "\n    `offset_lower_bounds, offset_upper_bounds, angle_lower_bounds, angle_upper_bounds`: offsets in [$min_offset, $max_offset] and angles in [$min_angle, $max_angle]."
     )
 end
 
@@ -153,4 +193,13 @@ function read_custom_test_dataset(relative_path::String)::DoubleLabeledImageData
     test_data = matread(absolute_path)
     test_data["images"] = reshape(test_data["images"], (size(test_data["images"])...,1))
     return DoubleLabeledImageDataset(test_data["images"]/255, test_data["offsets"][:], test_data["angles"][:])
+end
+
+function read_custom_dataset_with_range(relative_path::String)::RangeDataset
+    absolute_path = joinpath(root_path, relative_path)
+    test_data = matread(absolute_path)
+    # Add channel dimension
+    test_data["image_lower_bounds"] = reshape(test_data["image_lower_bounds"], (size(test_data["image_lower_bounds"])...,1)) #(N,H,W,C)
+    test_data["image_upper_bounds"] = reshape(test_data["image_upper_bounds"], (size(test_data["image_upper_bounds"])...,1)) #(N,H,W,C)
+    return RangeDataset(test_data["image_lower_bounds"]/255, test_data["image_upper_bounds"]/255, test_data["offset_lower_bounds"][:], test_data["offset_upper_bounds"][:], test_data["angle_lower_bounds"][:], test_data["angle_upper_bounds"][:])
 end

@@ -10,7 +10,8 @@ MIPVerify.setloglevel!("info")
 # primarily meant as a sanity check.
 # note that determining the fraction correct for is highly inefficient, and can be very slow for large networks!
 println("Average error of first 200 is $(average_error_across_labels(nnparams, test_dataset, 200))")
-# Fraction of first 1000 correct is expected to be 0.98
+
+test_dataset_with_range = read_custom_dataset_with_range("data/test_verify.mat")
 
 """
 MIPVerify.batch_find_untargeted_attack(
