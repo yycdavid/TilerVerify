@@ -13,7 +13,7 @@ using DataFrames
 const dependencies_path = joinpath(Pkg.dir("MIPVerify"), "deps")
 const root_path = dirname(dirname(@__DIR__))
 
-export find_adversarial_example, frac_correct, average_error_across_labels, interval_arithmetic, lp, mip
+export find_adversarial_example, find_range_for_outputs, frac_correct, average_error_across_labels, interval_arithmetic, lp, mip
 
 @enum TighteningAlgorithm interval_arithmetic=1 lp=2 mip=3
 @enum AdversarialExampleObjective closest=1 worst=2
@@ -153,6 +153,61 @@ function find_adversarial_example(
     d[:TotalTime] = total_time
     return d
 end
+
+# This function takes as input the lower and upper bounds of inputs, output the range for two regression targets
+function find_range_for_outputs(
+    nn::NeuralNet,
+    input_lower_bound::Array{<:Real},
+    input_upper_bound::Array{<:Real},
+    main_solver::MathProgBase.SolverInterface.AbstractMathProgSolver;
+    pp::PerturbationFamily = CustomPerturbationFamily(),
+    tightening_algorithm::TighteningAlgorithm = DEFAULT_TIGHTENING_ALGORITHM,
+    tightening_solver::MathProgBase.SolverInterface.AbstractMathProgSolver = get_default_tightening_solver(main_solver),
+    cache_model::Bool = true,
+    )::Dict
+
+    total_time = @elapsed begin
+        results_dict = Dict()
+        for setting in [:OffsetMin, :OffsetMax, :AngleMin, :AngleMax]
+
+            d = Dict()
+            if setting == :OffsetMin
+                rebuild = true
+            else
+                rebuild = false
+            end
+            merge!(
+                d,
+                get_model_for_max_error(nn, input_lower_bound, input_upper_bound, pp, tightening_solver, tightening_algorithm, rebuild, cache_model)
+            )
+            m = d[:Model]
+            if setting == :OffsetMin
+                @objective(m, Min, d[:Output][1])
+            elseif setting == :OffsetMax
+                @objective(m, Min, -d[:Output][1])
+            elseif setting == :AngleMin
+                @objective(m, Min, d[:Output][2])
+            else
+                @objective(m, Min, -d[:Output][2])
+            end
+            setsolver(m, main_solver)
+            solve_time = @elapsed begin
+                d[:SolveStatus] = solve(m)
+            end
+            d[:SolveTime] = solve_time
+            if setting == :OffsetMax || setting == :AngleMax
+                d[:ObjectiveValue] = -getobjectivevalue(m)
+            else
+                d[:ObjectiveValue] = getobjectivevalue(m)
+            end
+            results_dict[setting] = d
+        end
+    end
+
+    results_dict[:TotalTime] = total_time
+    return results_dict
+end
+
 
 function get_label(y::Array{<:Real, 1}, test_index::Integer)::Int
     return y[test_index]

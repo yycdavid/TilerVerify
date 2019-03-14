@@ -23,10 +23,15 @@ struct UnrestrictedPerturbationFamily <: PerturbationFamily end
 Base.show(io::IO, pp::UnrestrictedPerturbationFamily) = print(io, "unrestricted")
 Base.hash(a::UnrestrictedPerturbationFamily, h::UInt) = hash(:UnrestrictedPerturbationFamily, h)
 
+struct CustomPerturbationFamily <: PerturbationFamily end
+Base.show(io::IO, pp::CustomPerturbationFamily) = print(io, "custom")
+Base.hash(a::CustomPerturbationFamily, h::UInt) = hash(:CustomPerturbationFamily, h)
+
+
 abstract type RestrictedPerturbationFamily <: PerturbationFamily end
 
 """
-For blurring perturbations, we currently allow colors to "bleed" across color channels - 
+For blurring perturbations, we currently allow colors to "bleed" across color channels -
 that is, the value of the output of channel 1 can depend on the input to all channels.
 (This is something that is worth reconsidering if we are working on color input).
 """
@@ -60,8 +65,8 @@ function get_model(
     d = get_reusable_model(nn, input, pp, tightening_solver, tightening_algorithm, rebuild, cache_model)
     @constraint(d[:Model], d[:Input] .== input)
     delete!(d, :Input)
-    # NOTE (vtjeng): It is important to set the solver before attempting to add a 
-    # constraint, as the saved model may have been saved with a different solver (or 
+    # NOTE (vtjeng): It is important to set the solver before attempting to add a
+    # constraint, as the saved model may have been saved with a different solver (or
     # different) environment. Flipping the order of the two leads to test failures.
     return d
 end
@@ -76,6 +81,21 @@ function get_model(
     cache_model::Bool
     )::Dict
     d = get_reusable_model(nn, input, pp, tightening_solver, tightening_algorithm, rebuild, cache_model)
+    return d
+end
+
+# yicheny start with calling this in find_adversarial_example. For each datapoint, we compute 4 optimization problems, reusing the model cached for relu bounds. At each new datapoint, we rebuild the model
+function get_model_for_max_error(
+    nn::NeuralNet,
+    input_lower_bound::Array{<:Real},
+    input_upper_bound::Array{<:Real},
+    pp::CustomPerturbationFamily,
+    tightening_solver::MathProgBase.SolverInterface.AbstractMathProgSolver,
+    tightening_algorithm::TighteningAlgorithm,
+    rebuild::Bool,
+    cache_model::Bool
+    )::Dict
+    d = get_reusable_model_max_error(nn, input_lower_bound, input_upper_bound, pp, tightening_solver, tightening_algorithm, rebuild, cache_model)
     return d
 end
 
@@ -97,8 +117,8 @@ end
 $(SIGNATURES)
 
 For `RestrictedPerturbationFamily`, we take advantage of the restricted input search space
-corresponding to each nominal (unperturbed) input by considering only activations to the 
-non-linear units which are possible for some input in the restricted search space. This 
+corresponding to each nominal (unperturbed) input by considering only activations to the
+non-linear units which are possible for some input in the restricted search space. This
 reduces solve times, but also means that the model must be rebuilt for each different
 nominal input.
 """
@@ -106,6 +126,13 @@ function model_hash(
     nn::NeuralNet,
     input::Array{<:Real},
     pp::RestrictedPerturbationFamily)::UInt
+    return hash(nn, hash(input, hash(pp)))
+end
+
+function model_hash(
+    nn::NeuralNet,
+    input::Array{<:Real},
+    pp::CustomPerturbationFamily)::UInt
     return hash(nn, hash(input, hash(pp)))
 end
 
@@ -155,12 +182,51 @@ function get_reusable_model(
     return d
 end
 
+
+function get_reusable_model_max_error(
+    nn::NeuralNet,
+    input_lower_bound::Array{<:Real},
+    input_upper_bound::Array{<:Real},
+    pp::CustomPerturbationFamily,
+    tightening_solver::MathProgBase.SolverInterface.AbstractMathProgSolver,
+    tightening_algorithm::TighteningAlgorithm,
+    rebuild::Bool,
+    cache_model::Bool
+    )::Dict
+
+    filename = model_filename(nn, input_lower_bound, pp)
+    model_filepath = joinpath(model_dir, filename)
+
+    if isfile(model_filepath) && !rebuild
+        notice(MIPVerify.LOGGER, "Loading model from cache.")
+        d = open(model_filepath, "r") do f
+            deserialize(f)
+            # TODO (vtjeng): Identify situations where the saved model has a different name and throw and error.
+        end
+        d[:TighteningApproach] = "loaded_from_cache"
+        d[:Model].ext[:MIPVerify] = MIPVerifyExt(tightening_algorithm)
+    else
+        notice(MIPVerify.LOGGER, """
+        Rebuilding model from scratch. This may take some time as we determine upper and lower bounds for the input to each non-linear unit.""")
+        d = build_reusable_model_for_max_error(nn, input_lower_bound, input_upper_bound, pp, tightening_solver, tightening_algorithm)
+        if cache_model
+            notice(MIPVerify.LOGGER, """
+            The model built will be cached and re-used for future solves, unless you explicitly set rebuild=true.""")
+            open(model_filepath, "w") do f
+                 serialize(f, d)
+            end
+        end
+    end
+    setsolver(d[:Model], tightening_solver)
+    return d
+end
+
 function build_reusable_model_uncached(
     nn::NeuralNet,
     input::Array{<:Real},
     pp::UnrestrictedPerturbationFamily,
     tightening_solver::MathProgBase.SolverInterface.AbstractMathProgSolver,
-    tightening_algorithm::TighteningAlgorithm 
+    tightening_algorithm::TighteningAlgorithm
     )::Dict
 
     m = Model(solver = tightening_solver)
@@ -184,7 +250,7 @@ function build_reusable_model_uncached(
         :PerturbationFamily => pp,
         :TighteningApproach => string(tightening_algorithm)
     )
-    
+
     return d
 end
 
@@ -193,7 +259,7 @@ function build_reusable_model_uncached(
     input::Array{<:Real},
     pp::BlurringPerturbationFamily,
     tightening_solver::MathProgBase.SolverInterface.AbstractMathProgSolver,
-    tightening_algorithm::TighteningAlgorithm 
+    tightening_algorithm::TighteningAlgorithm
     )::Dict
     # For blurring perturbations, we build a new model for each input. This enables us to get
     # much better bounds.
@@ -230,7 +296,7 @@ function build_reusable_model_uncached(
     input::Array{<:Real},
     pp::LInfNormBoundedPerturbationFamily,
     tightening_solver::MathProgBase.SolverInterface.AbstractMathProgSolver,
-    tightening_algorithm::TighteningAlgorithm 
+    tightening_algorithm::TighteningAlgorithm
     )::Dict
 
     m = Model(solver = tightening_solver)
@@ -251,9 +317,38 @@ function build_reusable_model_uncached(
         :PerturbationFamily => pp,
         :TighteningApproach => string(tightening_algorithm)
     )
-    
+
     return d
 end
+
+function build_reusable_model_for_max_error(
+    nn::NeuralNet,
+    input_lower_bound::Array{<:Real},
+    input_upper_bound::Array{<:Real},
+    pp::CustomPerturbationFamily,
+    tightening_solver::MathProgBase.SolverInterface.AbstractMathProgSolver,
+    tightening_algorithm::TighteningAlgorithm
+    )::Dict
+
+    m = Model(solver = tightening_solver)
+    m.ext[:MIPVerify] = MIPVerifyExt(tightening_algorithm)
+
+    input_range = CartesianRange(size(input_lower_bound))
+    v_x0 = map(i -> @variable(m, lowerbound = max(0, input_lower_bound[i]), upperbound = min(1, input_upper_bound[i])), input_range) # image pixel variables
+
+    v_output = v_x0 |> nn
+
+    d = Dict(
+        :Model => m,
+        :PerturbedInput => v_x0,
+        :Output => v_output,
+        :PerturbationFamily => pp,
+        :TighteningApproach => string(tightening_algorithm)
+    )
+
+    return d
+end
+
 
 struct MIPVerifyExt
     tightening_algorithm::TighteningAlgorithm

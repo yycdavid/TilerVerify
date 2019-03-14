@@ -11,15 +11,16 @@ Highest level system:
 - MILP evaluation (Julia)
     - Core function: Take in a trained model, a set of test points with range, produce a max error for each test point
 
-TODO:
-- Export model parameters and dataset using the format compatible with MIPVerify
-- Write the dataset importing code in MIPVerify, with different range for different input entry
-- Write a new constraint with different range for different input entry
-- Write a new objective for our task
-- Experiment
-
-
 To verify a new network:
 1. Add the model in trainer/model.py, and train it
 2. Add the model in trainer/convert_for_milp.py, and convert the trained model into correct format for MIPVerify
-3. 
+3. Add the model in MIPVerify/src/utils/import_example_nets.jl
+
+
+
+TODO:
+- Know the time and space needed for verify a point, rough idea of the current error bound
+- Output the range dataset also with the center test point, in order for study purposes
+- Return the perturbed input for the best objective point. For testing whether the optimization is correctly done, and for inspecting
+- Write the batch processing, and result logging
+- Write down our general framework, and think what we want to show from this experiment
