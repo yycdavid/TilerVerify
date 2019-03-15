@@ -200,6 +200,7 @@ function find_range_for_outputs(
             else
                 d[:ObjectiveValue] = getobjectivevalue(m)
             end
+            d[:PerturbedInputValue] = d[:PerturbedInput] |> getvalue
             results_dict[setting] = d
         end
     end

@@ -14,24 +14,35 @@ MIPVerify.setloglevel!("info")
 
 test_dataset_with_range = read_custom_dataset_with_range("data/test_verify.mat")
 
-input_lower_bound = test_dataset_with_range.image_lower_bounds[1:1,:,:,:]
-input_upper_bound = test_dataset_with_range.image_upper_bounds[1:1,:,:,:]
-offset_low = test_dataset_with_range.offset_lower_bounds[1]
-offset_high = test_dataset_with_range.offset_upper_bounds[1]
-angle_low = test_dataset_with_range.angle_lower_bounds[1]
-angle_high = test_dataset_with_range.angle_upper_bounds[1]
+include("./test_helper.jl")
 
+summary = Any[]
+for i in 1:5
+    input_lower_bound = test_dataset_with_range.image_lower_bounds[i:i,:,:,:]
+    input_upper_bound = test_dataset_with_range.image_upper_bounds[i:i,:,:,:]
+    offset_low = test_dataset_with_range.offset_lower_bounds[i]
+    offset_high = test_dataset_with_range.offset_upper_bounds[i]
+    angle_low = test_dataset_with_range.angle_lower_bounds[i]
+    angle_high = test_dataset_with_range.angle_upper_bounds[i]
+    summary_item = Dict()
+    summary_item[:offset] = [offset_low, offset_high]
+    summary_item[:angle] = [angle_low, angle_high]
 
-result_dict = MIPVerify.find_range_for_outputs(
-    nnparams,
-    input_lower_bound,
-    input_upper_bound,
-    GurobiSolver(Gurobi.Env(), TimeLimit=1200),
-    pp = MIPVerify.CustomPerturbationFamily(),
-    tightening_algorithm=mip,
-    tightening_solver = GurobiSolver(Gurobi.Env(), OutputFlag=0, TimeLimit=20),
-)
+    result_dict = MIPVerify.find_range_for_outputs(
+        nnparams,
+        input_lower_bound,
+        input_upper_bound,
+        GurobiSolver(Gurobi.Env(), TimeLimit=1200),
+        pp = MIPVerify.CustomPerturbationFamily(),
+        tightening_algorithm=mip,
+        tightening_solver = GurobiSolver(Gurobi.Env(), OutputFlag=0, TimeLimit=20),
+    )
+    summary_item[:optimized] = check_optimization_correctness(result_dict, nnparams)
+    summary_item[:time] = result_dict[:TotalTime]
+    append!(summary, summary_item)
+end
 
+#save_matrix_as_mat(result_dict[:OffsetMin][:PerturbedInputValue])
 
 """
 MIPVerify.batch_find_untargeted_attack(

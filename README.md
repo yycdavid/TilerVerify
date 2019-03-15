@@ -17,10 +17,9 @@ To verify a new network:
 3. Add the model in MIPVerify/src/utils/import_example_nets.jl
 
 
+The current settings runs about 9 seconds per test point; error is roughly +/- 10 points, for offset~30 and angle~5-10 with range of 1. Perturbed image looks natural.
 
 TODO:
-- Know the time and space needed for verify a point, rough idea of the current error bound
 - Output the range dataset also with the center test point, in order for study purposes
-- Return the perturbed input for the best objective point. For testing whether the optimization is correctly done, and for inspecting
-- Write the batch processing, and result logging
 - Write down our general framework, and think what we want to show from this experiment
+- Write the batch processing, and result logging, before running any long-time experiments
