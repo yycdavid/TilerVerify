@@ -20,6 +20,5 @@ To verify a new network:
 The current settings runs about 9 seconds per test point; error is roughly +/- 10 points, for offset~30 and angle~5-10 with range of 1. Perturbed image looks natural.
 
 TODO:
-- Output the range dataset also with the center test point, in order for study purposes
 - Write down our general framework, and think what we want to show from this experiment
 - Write the batch processing, and result logging, before running any long-time experiments

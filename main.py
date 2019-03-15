@@ -46,17 +46,23 @@ def generate_dataset_for_verify(viewer, offset_range, angle_range, offset_grid_n
     offset_upper_bounds = []
     angle_lower_bounds = []
     angle_upper_bounds = []
+    images = []
+    offsets = []
+    angles = []
     for i in tqdm(range(offset_grid_num)):
         offset = offset_range[0] + i * offset_grid_size + offset_delta
         for j in range(angle_grid_num):
             angle = angle_range[0] + j * angle_grid_size + angle_delta
-            _, lower_bound_matrix, upper_bound_matrix = viewer.take_picture_with_range(offset, angle, offset_delta, angle_delta)
+            image, lower_bound_matrix, upper_bound_matrix = viewer.take_picture_with_range(offset, angle, offset_delta, angle_delta)
             image_lower_bounds.append(np.expand_dims(lower_bound_matrix, axis=0))
             image_upper_bounds.append(np.expand_dims(upper_bound_matrix, axis=0))
+            images.append(np.expand_dims(image, axis=0))
             offset_lower_bounds.append(offset - offset_delta)
             offset_upper_bounds.append(offset + offset_delta)
+            offsets.append(offset)
             angle_lower_bounds.append(angle - angle_delta)
             angle_upper_bounds.append(angle + angle_delta)
+            angles.append(angle)
 
     dataset = {}
     dataset['image_lower_bounds'] = np.concatenate(image_lower_bounds, axis=0) # (N, H, W)
@@ -65,7 +71,9 @@ def generate_dataset_for_verify(viewer, offset_range, angle_range, offset_grid_n
     dataset['offset_upper_bounds'] = np.array(offset_upper_bounds) # (N,)
     dataset['angle_lower_bounds'] = np.array(angle_lower_bounds) # (N,)
     dataset['angle_upper_bounds'] = np.array(angle_upper_bounds) # (N,)
-    import pdb; pdb.set_trace()
+    dataset['images'] = np.concatenate(images, axis=0) # (N, H, W)
+    dataset['offsets'] = np.array(offsets) # (N,)
+    dataset['angles'] = np.array(angles) # (N,)
     return dataset
 
 def main():

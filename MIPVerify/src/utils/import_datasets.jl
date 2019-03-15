@@ -99,14 +99,37 @@ struct RangeDataset{T<:Real, U<:Real, V<:Real}
     offset_upper_bounds::Array{U, 1}
     angle_lower_bounds::Array{V, 1}
     angle_upper_bounds::Array{V, 1}
+    images::Array{T, 4}
+    offsets::Array{U, 1}
+    angles::Array{V, 1}
 
-    function RangeDataset{T, U, V}(image_lower_bounds::Array{T, 4}, image_upper_bounds::Array{T, 4}, offset_lower_bounds::Array{U, 1}, offset_upper_bounds::Array{U, 1}, angle_lower_bounds::Array{V, 1}, angle_upper_bounds::Array{V, 1})::RangeDataset where {T<:Real, U<:Real, V<:Real}
-        return new(image_lower_bounds, image_upper_bounds, offset_lower_bounds, offset_upper_bounds, angle_lower_bounds, angle_upper_bounds)
+    function RangeDataset{T, U, V}(
+        image_lower_bounds::Array{T, 4},
+        image_upper_bounds::Array{T, 4},
+        offset_lower_bounds::Array{U, 1},
+        offset_upper_bounds::Array{U, 1},
+        angle_lower_bounds::Array{V, 1},
+        angle_upper_bounds::Array{V, 1},
+        images::Array{T, 4},
+        offsets::Array{U, 1},
+        angles::Array{V, 1}
+        )::RangeDataset where {T<:Real, U<:Real, V<:Real}
+        return new(image_lower_bounds, image_upper_bounds, offset_lower_bounds, offset_upper_bounds, angle_lower_bounds, angle_upper_bounds, images, offsets, angles)
     end
 end
 
-function RangeDataset(image_lower_bounds::Array{T, 4}, image_upper_bounds::Array{T, 4}, offset_lower_bounds::Array{U, 1}, offset_upper_bounds::Array{U, 1}, angle_lower_bounds::Array{V, 1}, angle_upper_bounds::Array{V, 1})::RangeDataset where {T<:Real, U<:Real, V<:Real}
-    RangeDataset{T, U, V}(image_lower_bounds, image_upper_bounds, offset_lower_bounds, offset_upper_bounds, angle_lower_bounds, angle_upper_bounds)
+function RangeDataset(
+    image_lower_bounds::Array{T, 4},
+    image_upper_bounds::Array{T, 4},
+    offset_lower_bounds::Array{U, 1},
+    offset_upper_bounds::Array{U, 1},
+    angle_lower_bounds::Array{V, 1},
+    angle_upper_bounds::Array{V, 1},
+    images::Array{T, 4},
+    offsets::Array{U, 1},
+    angles::Array{V, 1}
+    )::RangeDataset where {T<:Real, U<:Real, V<:Real}
+    RangeDataset{T, U, V}(image_lower_bounds, image_upper_bounds, offset_lower_bounds, offset_upper_bounds, angle_lower_bounds, angle_upper_bounds, images, offsets, angles)
 end
 
 function num_samples(dataset::RangeDataset)
@@ -201,5 +224,6 @@ function read_custom_dataset_with_range(relative_path::String)::RangeDataset
     # Add channel dimension
     test_data["image_lower_bounds"] = reshape(test_data["image_lower_bounds"], (size(test_data["image_lower_bounds"])...,1)) #(N,H,W,C)
     test_data["image_upper_bounds"] = reshape(test_data["image_upper_bounds"], (size(test_data["image_upper_bounds"])...,1)) #(N,H,W,C)
-    return RangeDataset(test_data["image_lower_bounds"]/255, test_data["image_upper_bounds"]/255, test_data["offset_lower_bounds"][:], test_data["offset_upper_bounds"][:], test_data["angle_lower_bounds"][:], test_data["angle_upper_bounds"][:])
+    test_data["images"] = reshape(test_data["images"], (size(test_data["images"])...,1)) #(N,H,W,C)
+    return RangeDataset(test_data["image_lower_bounds"]/255, test_data["image_upper_bounds"]/255, test_data["offset_lower_bounds"][:], test_data["offset_upper_bounds"][:], test_data["angle_lower_bounds"][:], test_data["angle_upper_bounds"][:], test_data["images"], test_data["offsets"][:], test_data["angles"][:])
 end

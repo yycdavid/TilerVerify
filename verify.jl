@@ -3,13 +3,13 @@ using MIPVerify
 using Gurobi
 
 nnparams = get_custom_network_params("CNN_small", "test_run")
-test_dataset = read_custom_test_dataset("data/valid.mat")
 
 MIPVerify.setloglevel!("info")
 
 # primarily meant as a sanity check.
 # note that determining the fraction correct for is highly inefficient, and can be very slow for large networks!
 
+# test_dataset = read_custom_test_dataset("data/valid.mat")
 # println("Average error of first 200 is $(average_error_across_labels(nnparams, test_dataset, 200))")
 
 test_dataset_with_range = read_custom_dataset_with_range("data/test_verify.mat")
@@ -17,7 +17,7 @@ test_dataset_with_range = read_custom_dataset_with_range("data/test_verify.mat")
 include("./test_helper.jl")
 
 summary = Any[]
-for i in 1:5
+for i in 1:2
     input_lower_bound = test_dataset_with_range.image_lower_bounds[i:i,:,:,:]
     input_upper_bound = test_dataset_with_range.image_upper_bounds[i:i,:,:,:]
     offset_low = test_dataset_with_range.offset_lower_bounds[i]
