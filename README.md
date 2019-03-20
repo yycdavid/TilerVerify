@@ -20,5 +20,16 @@ To verify a new network:
 The current settings runs about 9 seconds per test point; error is roughly +/- 10 points, for offset~30 and angle~5-10 with range of 1. Perturbed image looks natural.
 
 TODO:
-- Write down our general framework, and think what we want to show from this experiment
+- What we want to show from this experiment:
+How good the error bound is: 1) how close it is to the true error 2) is it in phase with true error landscape
+Can you make the error bound tighter in this framework: grid size against error
+
+- Generate data for estimating true error, estimate it (DONE)
+- Plot error map as heat map
+- Implement the running and saving of verify, run it
+- Implement statistics
+- Generate a few datasets with different grid size, run, and measure the statistics for closeness
+
+- Present: 1) Example images (also high resolution) 2) 2D heat maps 3) Statistics 4) Plot for different grid size
+
 - Write the batch processing, and result logging, before running any long-time experiments
