@@ -25,7 +25,7 @@ How good the error bound is: 1) how close it is to the true error 2) is it in ph
 Can you make the error bound tighter in this framework: grid size against error
 
 - Generate data for estimating true error, estimate it (DONE)
-- Plot error map as heat map
+- Plot error map as heat map (DONE)
 - Implement the running and saving of verify, run it
 - Implement statistics
 - Generate a few datasets with different grid size, run, and measure the statistics for closeness

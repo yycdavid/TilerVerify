@@ -5,3 +5,4 @@ trained_models/
 MNIST.WK17a_linf0.1_authors__linf-norm-bounded-0.1__Inf__0.0/
 .DS_Store
 *.mat
+*.png
