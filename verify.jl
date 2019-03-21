@@ -2,7 +2,8 @@ include("./MIPVerify/src/MIPVerify.jl")
 using MIPVerify
 using Gurobi
 
-nnparams = get_custom_network_params("CNN_small", "test_run")
+exp_name = "test_run"
+nnparams = get_custom_network_params("CNN_small", exp_name)
 
 MIPVerify.setloglevel!("info")
 
@@ -14,6 +15,18 @@ MIPVerify.setloglevel!("info")
 
 test_dataset_with_range = read_custom_dataset_with_range("data/test_verify.mat")
 
+MIPVerify.batch_find_error_bound(
+    nnparams,
+    test_dataset_with_range,
+    GurobiSolver(Gurobi.Env(), TimeLimit=1200),
+    save_path = joinpath("trained_models", exp_name),
+    pp = MIPVerify.CustomPerturbationFamily(),
+    solve_rerun_option = MIPVerify.never,
+    tightening_algorithm=mip,
+    tightening_solver = GurobiSolver(Gurobi.Env(), OutputFlag=0, TimeLimit=20),
+)
+
+#=
 include("./test_helper.jl")
 
 summary = Any[]
@@ -43,8 +56,9 @@ for i in 1:2
 end
 
 #save_matrix_as_mat(result_dict[:OffsetMin][:PerturbedInputValue])
+=#
 
-"""
+#=
 MIPVerify.batch_find_untargeted_attack(
     nnparams,
     mnist.test,
@@ -59,4 +73,4 @@ MIPVerify.batch_find_untargeted_attack(
     cache_model=false,
     solve_if_predicted_in_targeted=false,
 )
-"""
+=#

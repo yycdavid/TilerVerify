@@ -105,6 +105,8 @@ def generate_dataset_for_verify(viewer, offset_range, angle_range, offset_grid_n
     dataset['images'] = np.concatenate(images, axis=0) # (N, H, W)
     dataset['offsets'] = np.array(offsets) # (N,)
     dataset['angles'] = np.array(angles) # (N,)
+    dataset['offset_grid_num'] = offset_grid_num
+    dataset['angle_grid_num'] = angle_grid_num
     return dataset
 
 def gen_train_valid_data(viewer):
@@ -125,10 +127,10 @@ def gen_train_valid_data(viewer):
 
 def gen_test_data_for_verify(viewer):
     # Generate a test set for verify
-    offset_range = [-20, 20]
-    angle_range = [-10, 10]
-    offset_grid_num = 40
-    angle_grid_num = 20
+    offset_range = [-2, 2]
+    angle_range = [-1, 1]
+    offset_grid_num = 4
+    angle_grid_num = 2
     dataset = generate_dataset_for_verify(viewer, offset_range, angle_range, offset_grid_num, angle_grid_num)
     data_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'data')
     if not os.path.exists(data_dir):
@@ -184,9 +186,9 @@ def main():
 
     #gen_train_valid_data(viewer)
 
-    #gen_test_data_for_verify(viewer)
+    gen_test_data_for_verify(viewer)
 
-    gen_test_data_for_error_est(viewer)
+    #gen_test_data_for_error_est(viewer)
 
     #gen_example_picture(viewer)
 
