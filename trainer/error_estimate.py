@@ -33,6 +33,7 @@ def main():
     parser = argparse.ArgumentParser(description='Compute estimated error on test set')
     parser.add_argument('--exp_name', help='name of experiment to compute error')
     parser.add_argument('--data', help='dataset file to compute error on')
+    parser.add_argument('--grid_size', type=float, help='Grid size of the dataset')
     args = parser.parse_args()
     base_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
     result_root = os.path.join(base_dir, RESULTS_ROOT)
@@ -72,7 +73,9 @@ def main():
     error_result['offset_grid_num'] = dataset['offset_grid_num']
     error_result['angle_grid_num'] = dataset['angle_grid_num']
 
-    sio.savemat(os.path.join(exp_dir, 'error_est_result.mat'), error_result)
+    offset_range = int(args.grid_size * dataset['offset_grid_num']/2)
+    angle_range = int(args.grid_size * dataset['angle_grid_num']/2)
+    sio.savemat(os.path.join(exp_dir, 'offset_{}_angle_{}_grid_size_{}'.format(offset_range, angle_range, args.grid_size), 'error_est_result.mat'), error_result)
 
 
 

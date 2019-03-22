@@ -13,7 +13,7 @@ MIPVerify.setloglevel!("info")
 # test_dataset = read_custom_test_dataset("data/valid.mat")
 # println("Average error of first 200 is $(average_error_across_labels(nnparams, test_dataset, 200))")
 
-test_dataset_with_range = read_custom_dataset_with_range("data/test_verify_10_1.mat")
+test_dataset_with_range = read_custom_dataset_with_range("data/test_verify_$(ARGS[1])_$(ARGS[2]).mat")
 
 MIPVerify.batch_find_error_bound(
     nnparams,

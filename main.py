@@ -5,6 +5,8 @@ import numpy as np
 import pickle
 from tqdm import tqdm
 import scipy.io as sio
+import argparse
+import math
 
 # Unit centimeters
 scene_params = {
@@ -124,32 +126,32 @@ def gen_train_valid_data(viewer):
     sio.savemat(os.path.join(data_dir, 'train_20_10000.mat'), training_set)
     sio.savemat(os.path.join(data_dir, 'valid_20_500.mat'), validation_set)
 
-def gen_test_data_for_verify(viewer):
+def gen_test_data_for_verify(viewer, range, grid_size):
     # Generate a test set for verify
-    offset_range = [-10, 10]
-    angle_range = [-10, 10]
-    offset_grid_num = 20
-    angle_grid_num = 20
+    offset_range = [-range, range]
+    angle_range = [-range, range]
+    offset_grid_num = int(2*range/grid_size)
+    angle_grid_num = int(2*range/grid_size)
     dataset = generate_dataset_for_verify(viewer, offset_range, angle_range, offset_grid_num, angle_grid_num)
     data_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'data')
     if not os.path.exists(data_dir):
         print("Creating {}".format(data_dir))
         os.makedirs(data_dir)
-    sio.savemat(os.path.join(data_dir, 'test_verify_10_1.mat'), dataset)
+    sio.savemat(os.path.join(data_dir, 'test_verify_{}_{}.mat'.format(range, grid_size)), dataset)
 
-def gen_test_data_for_error_est(viewer):
+def gen_test_data_for_error_est(viewer, range, grid_size):
     # Generate a test set for error estimation
-    offset_range = [-10, 10]
-    angle_range = [-10, 10]
-    offset_grid_num = 20
-    angle_grid_num = 20
-    num_points_per_side = 10
+    offset_range = [-range, range]
+    angle_range = [-range, range]
+    offset_grid_num = int(2*range/grid_size)
+    angle_grid_num = int(2*range/grid_size)
+    num_points_per_side = math.ceil(grid_size/0.1)
     dataset = generate_dataset_for_error_est(viewer, offset_range, angle_range, offset_grid_num, angle_grid_num, num_points_per_side)
     data_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'data')
     if not os.path.exists(data_dir):
         print("Creating {}".format(data_dir))
         os.makedirs(data_dir)
-    sio.savemat(os.path.join(data_dir, 'test_error_est_10_1.mat'), dataset)
+    sio.savemat(os.path.join(data_dir, 'test_error_est_{}_{}.mat'.format(range, grid_size)), dataset)
 
 def gen_example_picture(viewer):
     # Generate a picture
@@ -183,11 +185,15 @@ def main():
     scene = image_generator.Scene(scene_params)
     viewer = image_generator.Viewer(camera_params, scene)
 
+    parser = argparse.ArgumentParser(description='Dataset generation')
+    parser.add_argument('--range', type=int, help='Range for offset and angle, for generating test datasets')
+    parser.add_argument('--grid_size', type=float, help='Grid size for calculating error')
+    args = parser.parse_args()
+
+    gen_test_data_for_error_est(viewer, args.range, args.grid_size)
+    gen_test_data_for_verify(viewer, args.range, args.grid_size)
+
     #gen_train_valid_data(viewer)
-
-    #gen_test_data_for_verify(viewer)
-
-    gen_test_data_for_error_est(viewer)
 
     #gen_example_picture(viewer)
 

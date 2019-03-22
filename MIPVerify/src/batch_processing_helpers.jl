@@ -170,7 +170,9 @@ function initialize_batch_solve_for_error(
     )::Tuple{String,String,DataFrames.DataFrame}
 
     summary_file_name = "summary.csv"
-    batch_run_parameters = "offset_$(offset_grid_num)_angle_$(angle_grid_num)_grid_size_$(grid_size)"
+    offset_range = Integer(offset_grid_num*grid_size/2)
+    angle_range = Integer(angle_grid_num*grid_size/2)
+    batch_run_parameters = "offset_$(offset_range)_angle_$(angle_range)_grid_size_$(grid_size)"
 
     main_path = joinpath(save_path, batch_run_parameters |> string)
 
