@@ -24,14 +24,17 @@ TODO:
 How good the error bound is: 1) how close it is to the true error 2) is it in phase with true error landscape
 Can you make the error bound tighter in this framework: grid size against error
 
-- Generate data for estimating true error, estimate it (DONE)
-- Plot error map as heat map (DONE)
-- Implement the running and saving of verify, run it (DONE)
-- Decide a range for input space to experiment on, then generate a new training set with more data. Train. Get estimated error, with more samples. Run MIP on this range. Compare error maps. (DONE)
-    - Range is [-10, 10] for both offset and angle. Train on [-20,20] for both, 10000 examples, train_20_10000.mat; validate on 500 examples, valid_20_500.mat; error estimate using grid size 1, test_error_est_10_1.mat; error bound using grid size 1, test_verify_10_1.mat
-- Implement statistics (DONE)
-- Generate a few datasets with different grid size, run, and measure the statistics for closeness
+In a reasonable setting and a reasonable input space, our method can give a bound of 5 percent of the input
+range.  
 
-- Present: 1) Example images (also high resolution) 2) 2D heat maps 3) Statistics 4) Plot for different grid size
+(3.25-3.30)
+- Setup the experiment on clusters, use parallelism (3.25,26)
+- Run experiments for a larger range (potentially a different scene and camera settings) (3.26)
+- Measuring bound closeness by taking difference between bound and actual and divide by range for measurement. (3.27)
+- Progressive tiling/adaptive grid size selection (3.27-30)
 
-- Write the batch processing, and result logging, before running any long-time experiments
+(4.1-7)
+- Run experiments
+
+(4.7-21)
+- Write up

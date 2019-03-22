@@ -155,13 +155,13 @@ def gen_test_data_for_error_est(viewer, range, grid_size):
 
 def gen_example_picture(viewer):
     # Generate a picture
-    offset = -102.0
-    angle = 60.0
+    offset = -10.0
+    angle = -10.0
     image_taken = viewer.take_picture(offset, angle)
 
     img = Image.fromarray(image_taken)
     img = img.convert("L")
-    img.save('test.jpg')
+    img.save('32_offset_{}_angle_{}.jpg'.format(offset, angle))
 
 def gen_example_picture_with_range(viewer):
     # Generate a picture with range
@@ -185,6 +185,7 @@ def main():
     scene = image_generator.Scene(scene_params)
     viewer = image_generator.Viewer(camera_params, scene)
 
+    """
     parser = argparse.ArgumentParser(description='Dataset generation')
     parser.add_argument('--range', type=int, help='Range for offset and angle, for generating test datasets')
     parser.add_argument('--grid_size', type=float, help='Grid size for calculating error')
@@ -192,10 +193,11 @@ def main():
 
     gen_test_data_for_error_est(viewer, args.range, args.grid_size)
     gen_test_data_for_verify(viewer, args.range, args.grid_size)
+    """
 
     #gen_train_valid_data(viewer)
 
-    #gen_example_picture(viewer)
+    gen_example_picture(viewer)
 
     #gen_example_picture_with_range(viewer)
 

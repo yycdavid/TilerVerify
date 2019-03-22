@@ -25,7 +25,7 @@ def get_total_time_for_verify(model_name, exp_name):
 
 def main():
     model_name = '20_10000'
-    exp_names = ['offset_10_angle_10_grid_size_0.5', 'offset_10_angle_10_grid_size_0.25']
+    exp_names = ['offset_20_angle_20_grid_size_1.0']
     for exp_name in exp_names:
         get_total_time_for_verify(model_name, exp_name)
 
