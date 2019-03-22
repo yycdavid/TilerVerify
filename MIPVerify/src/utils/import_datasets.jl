@@ -104,7 +104,7 @@ struct RangeDataset{T<:Real, U<:Real, V<:Real}
     angles::Array{V, 1}
     offset_grid_num::Integer
     angle_grid_num::Integer
-    grid_size::V
+    grid_size::Real
 
     function RangeDataset{T, U, V}(
         image_lower_bounds::Array{T, 4},
@@ -117,9 +117,10 @@ struct RangeDataset{T<:Real, U<:Real, V<:Real}
         offsets::Array{U, 1},
         angles::Array{V, 1},
         offset_grid_num::Integer,
-        angle_grid_num::Integer
+        angle_grid_num::Integer,
+        grid_size::Real
         )::RangeDataset where {T<:Real, U<:Real, V<:Real}
-        return new(image_lower_bounds, image_upper_bounds, offset_lower_bounds, offset_upper_bounds, angle_lower_bounds, angle_upper_bounds, images, offsets, angles, offset_grid_num, angle_grid_num, angle_lower_bounds[2]-angle_lower_bounds[1])
+        return new(image_lower_bounds, image_upper_bounds, offset_lower_bounds, offset_upper_bounds, angle_lower_bounds, angle_upper_bounds, images, offsets, angles, offset_grid_num, angle_grid_num, grid_size)
     end
 end
 
@@ -134,9 +135,10 @@ function RangeDataset(
     offsets::Array{U, 1},
     angles::Array{V, 1},
     offset_grid_num::Integer,
-    angle_grid_num::Integer
+    angle_grid_num::Integer,
+    grid_size::Real
     )::RangeDataset where {T<:Real, U<:Real, V<:Real}
-    RangeDataset{T, U, V}(image_lower_bounds, image_upper_bounds, offset_lower_bounds, offset_upper_bounds, angle_lower_bounds, angle_upper_bounds, images, offsets, angles, offset_grid_num, angle_grid_num)
+    RangeDataset{T, U, V}(image_lower_bounds, image_upper_bounds, offset_lower_bounds, offset_upper_bounds, angle_lower_bounds, angle_upper_bounds, images, offsets, angles, offset_grid_num, angle_grid_num, grid_size)
 end
 
 function num_samples(dataset::RangeDataset)
@@ -228,9 +230,11 @@ end
 function read_custom_dataset_with_range(relative_path::String)::RangeDataset
     absolute_path = joinpath(root_path, relative_path)
     test_data = matread(absolute_path)
+    # Get grid size
+    grid_size = parse(Float64, Base.split(relative_path,"_")[end][1:end-4])
     # Add channel dimension
     test_data["image_lower_bounds"] = reshape(test_data["image_lower_bounds"], (size(test_data["image_lower_bounds"])...,1)) #(N,H,W,C)
     test_data["image_upper_bounds"] = reshape(test_data["image_upper_bounds"], (size(test_data["image_upper_bounds"])...,1)) #(N,H,W,C)
     test_data["images"] = reshape(test_data["images"], (size(test_data["images"])...,1)) #(N,H,W,C)
-    return RangeDataset(test_data["image_lower_bounds"]/255, test_data["image_upper_bounds"]/255, test_data["offset_lower_bounds"][:], test_data["offset_upper_bounds"][:], test_data["angle_lower_bounds"][:], test_data["angle_upper_bounds"][:], test_data["images"], test_data["offsets"][:], test_data["angles"][:], test_data["offset_grid_num"], test_data["angle_grid_num"])
+    return RangeDataset(test_data["image_lower_bounds"]/255, test_data["image_upper_bounds"]/255, test_data["offset_lower_bounds"][:], test_data["offset_upper_bounds"][:], test_data["angle_lower_bounds"][:], test_data["angle_upper_bounds"][:], test_data["images"], test_data["offsets"][:], test_data["angles"][:], test_data["offset_grid_num"], test_data["angle_grid_num"], grid_size)
 end
