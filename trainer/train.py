@@ -7,6 +7,7 @@ import pickle
 import utils
 from PIL import Image
 import torch.nn.functional as F
+import scipy.io as sio
 
 from model import CNN_small
 from dataset import RoadSceneDataset
@@ -45,13 +46,14 @@ def test(args, model, device, test_loader):
 def get_args():
     parser = argparse.ArgumentParser(description='Training model for the synthetic road scene')
     # Training settings
-    parser.add_argument('--data', type=str, help='Path to training and evaluation data')
+    parser.add_argument('--train_data', type=str, help='File of training data')
+    parser.add_argument('--val_data', type=str, help='File of validation data')
     parser.add_argument('--batch-size', type=int, default=64, metavar='N',
                         help='input batch size for training (default: 64)')
     parser.add_argument('--eval-batch-size', type=int, default=1000, metavar='N',
                         help='input batch size for evaluation (default: 1000)')
     parser.add_argument('--epochs', type=int, default=50, metavar='N',
-                        help='max number of epochs to train (default: 10)')
+                        help='max number of epochs to train (default: 50)')
     parser.add_argument('--lr', type=float, default=0.01, metavar='LR',
                         help='learning rate (default: 0.01)')
     parser.add_argument('--momentum', type=float, default=0.5, metavar='M',
@@ -66,17 +68,14 @@ def get_args():
 
     return parser.parse_args()
 
-def load_data(data_dir):
+def load_data(data_dir, train_file, val_file):
     # Load training and evaluation data
-    with open(os.path.join(data_dir, 'train.bin'), 'rb') as f:
-        train_data = pickle.load(f)
-    with open(os.path.join(data_dir, 'valid.bin'), 'rb') as f:
-        eval_data = pickle.load(f)
+    train_data = sio.loadmat(os.path.join(data_dir, train_file))
+    eval_data = sio.loadmat(os.path.join(data_dir, val_file))
     return train_data, eval_data
 
 def main():
     args = get_args()
-    assert args.data is not None, 'Need to specify data directory'
     assert args.result is not None, 'Need to specify result directory'
     # Create folder to store results for this experiment
     base_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
@@ -93,11 +92,11 @@ def main():
     torch.manual_seed(args.seed)
     device = torch.device("cuda" if use_cuda else "cpu")
 
-    data_dir = os.path.join(base_dir, args.data)
-    train_data, eval_data = load_data(data_dir)
+    data_dir = os.path.join(base_dir, 'data')
+    train_data, eval_data = load_data(data_dir, args.train_data, args.val_data)
 
-    train_dataset = RoadSceneDataset(train_data['images'], train_data['offsets'], train_data['angles'])
-    eval_dataset = RoadSceneDataset(eval_data['images'], eval_data['offsets'], eval_data['angles'])
+    train_dataset = RoadSceneDataset(train_data['images'], train_data['offsets'].squeeze(), train_data['angles'].squeeze())
+    eval_dataset = RoadSceneDataset(eval_data['images'], eval_data['offsets'].squeeze(), eval_data['angles'].squeeze())
     train_loader = torch.utils.data.DataLoader(
         train_dataset,
         batch_size=args.batch_size, shuffle=True)

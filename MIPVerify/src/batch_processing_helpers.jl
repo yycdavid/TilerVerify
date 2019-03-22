@@ -528,8 +528,8 @@ function batch_find_error_bound(
 
     # Get error matrix
     summary_dt = CSV.read(summary_file_path)
-    offset_errors = max(summary_dt[:OffsetMaxSolved] - summary_dt[:OffsetMin], summary_dt[:OffsetMax] - summary_dt[:OffsetMinSolved])
-    angle_errors = max(summary_dt[:AngleMaxSolved] - summary_dt[:AngleMin], summary_dt[:AngleMax] - summary_dt[:AngleMinSolved])
+    offset_errors = max.(summary_dt[:OffsetMaxSolved] - summary_dt[:OffsetMin], summary_dt[:OffsetMax] - summary_dt[:OffsetMinSolved])
+    angle_errors = max.(summary_dt[:AngleMaxSolved] - summary_dt[:AngleMin], summary_dt[:AngleMax] - summary_dt[:AngleMinSolved])
     error_result = Dict()
     error_result["offset_errors"] = offset_errors
     error_result["angle_errors"] = angle_errors

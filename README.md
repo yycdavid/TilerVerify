@@ -27,6 +27,8 @@ Can you make the error bound tighter in this framework: grid size against error
 - Generate data for estimating true error, estimate it (DONE)
 - Plot error map as heat map (DONE)
 - Implement the running and saving of verify, run it (DONE)
+- Decide a range for input space to experiment on, then generate a new training set with more data. Train. Get estimated error, with more samples. Run MIP on this range. Compare error maps.
+    - Range is [-10, 10] for both offset and angle. Train on [-20,20] for both, 10000 examples, train_20_10000.mat; validate on 500 examples, valid_20_500.mat; error estimate using grid size 1, test_error_est_10_1.mat; error bound using grid size 1, test_verify_10_1.mat 
 - Implement statistics
 - Generate a few datasets with different grid size, run, and measure the statistics for closeness
 

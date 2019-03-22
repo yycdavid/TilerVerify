@@ -73,7 +73,6 @@ def main():
     error_result['angle_grid_num'] = dataset['angle_grid_num']
 
     sio.savemat(os.path.join(exp_dir, 'error_est_result.mat'), error_result)
-    import pdb; pdb.set_trace()
 
 
 

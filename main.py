@@ -56,7 +56,6 @@ def generate_dataset_for_error_est(viewer, offset_range, angle_range, offset_gri
                     offsets.append(offset)
                     angles.append(angle)
     dataset = {}
-    import pdb; pdb.set_trace()
     dataset['images'] = np.concatenate(images, axis=0) # (N, H, W)
     dataset['offsets'] = np.array(offsets) # (N,)
     dataset['angles'] = np.array(angles) # (N,)
@@ -111,10 +110,10 @@ def generate_dataset_for_verify(viewer, offset_range, angle_range, offset_grid_n
 
 def gen_train_valid_data(viewer):
     # Generate training and validation dataset
-    offset_range = [-150, 150]
-    angle_range = [-60, 60]
-    training_size = 1000
-    validation_size = 200
+    offset_range = [-20, 20]
+    angle_range = [-20, 20]
+    training_size = 10000
+    validation_size = 500
     training_set = generate_dataset(viewer, training_size, offset_range, angle_range)
     validation_set = generate_dataset(viewer, validation_size, offset_range, angle_range)
 
@@ -122,35 +121,35 @@ def gen_train_valid_data(viewer):
     if not os.path.exists(data_dir):
         print("Creating {}".format(data_dir))
         os.makedirs(data_dir)
-    sio.savemat(os.path.join(data_dir, 'train.mat'), training_set)
-    sio.savemat(os.path.join(data_dir, 'valid.mat'), validation_set)
+    sio.savemat(os.path.join(data_dir, 'train_20_10000.mat'), training_set)
+    sio.savemat(os.path.join(data_dir, 'valid_20_500.mat'), validation_set)
 
 def gen_test_data_for_verify(viewer):
     # Generate a test set for verify
-    offset_range = [-2, 2]
-    angle_range = [-1, 1]
-    offset_grid_num = 4
-    angle_grid_num = 2
+    offset_range = [-10, 10]
+    angle_range = [-10, 10]
+    offset_grid_num = 20
+    angle_grid_num = 20
     dataset = generate_dataset_for_verify(viewer, offset_range, angle_range, offset_grid_num, angle_grid_num)
     data_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'data')
     if not os.path.exists(data_dir):
         print("Creating {}".format(data_dir))
         os.makedirs(data_dir)
-    sio.savemat(os.path.join(data_dir, 'test_verify.mat'), dataset)
+    sio.savemat(os.path.join(data_dir, 'test_verify_10_1.mat'), dataset)
 
 def gen_test_data_for_error_est(viewer):
     # Generate a test set for error estimation
-    offset_range = [-20, 20]
+    offset_range = [-10, 10]
     angle_range = [-10, 10]
-    offset_grid_num = 40
+    offset_grid_num = 20
     angle_grid_num = 20
-    num_points_per_side = 5
+    num_points_per_side = 10
     dataset = generate_dataset_for_error_est(viewer, offset_range, angle_range, offset_grid_num, angle_grid_num, num_points_per_side)
     data_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'data')
     if not os.path.exists(data_dir):
         print("Creating {}".format(data_dir))
         os.makedirs(data_dir)
-    sio.savemat(os.path.join(data_dir, 'test_error_est.mat'), dataset)
+    sio.savemat(os.path.join(data_dir, 'test_error_est_10_1.mat'), dataset)
 
 def gen_example_picture(viewer):
     # Generate a picture
@@ -186,9 +185,9 @@ def main():
 
     #gen_train_valid_data(viewer)
 
-    gen_test_data_for_verify(viewer)
+    #gen_test_data_for_verify(viewer)
 
-    #gen_test_data_for_error_est(viewer)
+    gen_test_data_for_error_est(viewer)
 
     #gen_example_picture(viewer)
 
