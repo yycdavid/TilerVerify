@@ -8,15 +8,15 @@ import scipy.io as sio
 import argparse
 import math
 
-# Unit centimeters
+# 1 Unit = 5 centimeters
 scene_params = {
-'line_width': 6.0,
-'road_width': 60.0, # per lane
+'line_width': 4.0,
+'road_width': 50.0, # per lane
 'shade_width': 1.0,
 }
 
 camera_params = {
-'height': 30.0,
+'height': 20.0,
 'focal_length': 1.0,
 'pixel_num': 32,
 'pixel_size': 0.16,

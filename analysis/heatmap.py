@@ -64,8 +64,8 @@ def main():
         angle_grid_num = int(error_result['angle_grid_num'])
         offset_error_matrix = np.reshape(error_result['offset_errors'], (offset_grid_num, angle_grid_num))
         angle_error_matrix = np.reshape(error_result['angle_errors'], (offset_grid_num, angle_grid_num))
-        plot_heat_map(offset_error_matrix, 'offset')
-        #plot_heat_map(angle_error_matrix, 'angle')
+        #plot_heat_map(offset_error_matrix, 'offset')
+        plot_heat_map(angle_error_matrix, 'angle')
 
 
 if __name__ == '__main__':
