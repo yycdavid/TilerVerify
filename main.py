@@ -10,16 +10,16 @@ import math
 
 # Unit centimeters
 scene_params = {
-'line_width': 30.0,
-'road_width': 300.0, # per lane
-'shade_width': 5.0,
+'line_width': 6.0,
+'road_width': 60.0, # per lane
+'shade_width': 1.0,
 }
 
 camera_params = {
-'height': 150.0,
-'focal_length': 5.0,
+'height': 30.0,
+'focal_length': 1.0,
 'pixel_num': 32,
-'pixel_size': 0.8,
+'pixel_size': 0.16,
 }
 
 def generate_dataset(viewer, num_images, offset_range, angle_range):
@@ -112,10 +112,10 @@ def generate_dataset_for_verify(viewer, offset_range, angle_range, offset_grid_n
 
 def gen_train_valid_data(viewer):
     # Generate training and validation dataset
-    offset_range = [-20, 20]
-    angle_range = [-20, 20]
-    training_size = 10000
-    validation_size = 500
+    offset_range = [-50, 50]
+    angle_range = [-55, 55]
+    training_size = 100000
+    validation_size = 1000
     training_set = generate_dataset(viewer, training_size, offset_range, angle_range)
     validation_set = generate_dataset(viewer, validation_size, offset_range, angle_range)
 
@@ -123,8 +123,8 @@ def gen_train_valid_data(viewer):
     if not os.path.exists(data_dir):
         print("Creating {}".format(data_dir))
         os.makedirs(data_dir)
-    sio.savemat(os.path.join(data_dir, 'train_20_10000.mat'), training_set)
-    sio.savemat(os.path.join(data_dir, 'valid_20_500.mat'), validation_set)
+    sio.savemat(os.path.join(data_dir, 'train_big_100000.mat'), training_set)
+    sio.savemat(os.path.join(data_dir, 'valid_big_1000.mat'), validation_set)
 
 def gen_test_data_for_verify(viewer, range, grid_size):
     # Generate a test set for verify
@@ -155,8 +155,8 @@ def gen_test_data_for_error_est(viewer, range, grid_size):
 
 def gen_example_picture(viewer):
     # Generate a picture
-    offset = -10.0
-    angle = -10.0
+    offset = -40.0
+    angle = 45.0
     image_taken = viewer.take_picture(offset, angle)
 
     img = Image.fromarray(image_taken)
@@ -195,9 +195,9 @@ def main():
     gen_test_data_for_verify(viewer, args.range, args.grid_size)
     """
 
-    #gen_train_valid_data(viewer)
+    gen_train_valid_data(viewer)
 
-    gen_example_picture(viewer)
+    #gen_example_picture(viewer)
 
     #gen_example_picture_with_range(viewer)
 

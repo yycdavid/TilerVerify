@@ -14,7 +14,7 @@ from dataset import RoadSceneDataset
 
 outputManager = 0
 RESULTS_ROOT = 'trained_models'
-MAX_NON_IMPROVING_EPOCHS = 10
+MAX_NON_IMPROVING_EPOCHS = 5
 
 def train(args, model, device, train_loader, optimizer, epoch):
     model.train()
