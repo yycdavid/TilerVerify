@@ -2,7 +2,7 @@
 
 #python3 trainer/error_estimate.py --exp_name 20_10000 --data test_error_est_10_1.mat
 
-#python3 analysis/heatmap.py --exp_name 20_10000/offset_20_angle_20_grid_size_1.0 --type bound
+#python3 analysis/heatmap.py --exp_name data/verify_offset_1_angle_1_grid_0.1_thread_30 --type bound
 
 #python3 analysis/statistics.py --exp_name 20_10000/offset_20_angle_20_grid_size_1.0
 
@@ -21,9 +21,11 @@
 
 #python3 parallel_verify.py --offset_range 1 --angle_range 1 --grid_size 0.1 --num_threads 30
 
-exp_name=big_100000
+#exp_name=big_100000
 data_name=verify_offset_1_angle_1_grid_0.1_thread_30
-for thread_number in {0..29}
-do
-    /raid/yicheny/software/julia-9d11f62bcb/bin/julia verify_thread.jl $exp_name $data_name $thread_number &
-done
+#for thread_number in {0..29}
+#do
+#    /raid/yicheny/software/julia-9d11f62bcb/bin/julia verify_thread.jl $exp_name $data_name $thread_number &
+#done
+
+/raid/yicheny/software/julia-9d11f62bcb/bin/julia thread_collect.jl $data_name 29
