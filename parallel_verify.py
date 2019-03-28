@@ -20,9 +20,7 @@ def main():
     # Generate data for verify as separate files for each thread, in a subdirectory in data
     generate_data.gen_data_for_verify_parallel(args.offset_range, args.angle_range, args.grid_size, args.num_threads)
 
-    # Call .jl script
-    pool = mp.Pool(processes=num_threads)
-    results = [pool.apply_async(compute_phseq_conf, args=(conf_mtrx, p_insert, phseq_list, rng)) for rng in range_list]
+    
 
 
 if __name__ == '__main__':

@@ -1,4 +1,4 @@
-export batch_find_untargeted_attack, batch_find_error_bound
+export batch_find_untargeted_attack, batch_find_error_bound, batch_find_error_bound_thread
 
 @enum SolveRerunOption never=1 always=2 resolve_ambiguous_cases=3 refine_insecure_cases=4 retarget_infeasible_cases=5
 
@@ -183,6 +183,24 @@ function initialize_batch_solve_for_error(
 
     dt = CSV.read(summary_file_path)
     return (main_path, summary_file_path, dt)
+end
+
+function initialize_batch_solve_for_error_thread(
+    save_path::String,
+    thread_number::Integer
+    )::Tuple{String,String,DataFrames.DataFrame}
+
+    summary_file_name = "summary.csv"
+
+    summary_file_path = joinpath(save_path, summary_file_name)
+    summary_file_path|> create_summary_file_if_not_present_for_error
+
+    dt = CSV.read(summary_file_path)
+
+    thread_summary_file_name = "summary_$(thread_number).csv"
+    thread_summary_file_path = joinpath(save_path, thread_summary_file_name)
+    thread_summary_file_path|> create_summary_file_if_not_present_for_error
+    return (save_path, thread_summary_file_path, dt)
 end
 
 function save_to_disk(
@@ -538,6 +556,80 @@ function batch_find_error_bound(
     error_result["offset_grid_num"] = dataset.offset_grid_num
     error_result["angle_grid_num"] = dataset.angle_grid_num
     matwrite(joinpath(main_path, "error_bound_result.mat"), error_result)
+
+    # Report if any entry is not solved to optimal
+    if !isempty(non_optimal_entries)
+        println("There are samples not solved to optimal:\n")
+        println(non_optimal_entries)
+    else
+        println("All samples are solved to optimal.")
+    end
+    return nothing
+end
+
+
+function batch_find_error_bound_thread(
+    nn::NeuralNet,
+    dataset::MIPVerify.RangeThreadDataset,
+    main_solver::MathProgBase.SolverInterface.AbstractMathProgSolver,
+    thread_number::Integer;
+    save_path::String = ".",
+    solve_rerun_option::MIPVerify.SolveRerunOption = MIPVerify.never,
+    pp::MIPVerify.PerturbationFamily = MIPVerify.CustomPerturbationFamily(),
+    tightening_algorithm::MIPVerify.TighteningAlgorithm = DEFAULT_TIGHTENING_ALGORITHM,
+    tightening_solver::MathProgBase.SolverInterface.AbstractMathProgSolver = MIPVerify.get_default_tightening_solver(main_solver),
+    )::Void
+
+    (main_path, thread_summary_file_path, dt) = initialize_batch_solve_for_error_thread(
+        save_path,
+        thread_number
+        )
+    num_entries = MIPVerify.num_samples(dataset)
+
+    non_optimal_entries = []
+    for sample_number in 1:num_entries
+        if run_on_sample_for_untargeted_attack(sample_number, dt, solve_rerun_option)
+            info(MIPVerify.LOGGER, "Working on index $(dataset.index[sample_number])")
+
+            input_lower_bound = dataset.image_lower_bounds[sample_number:sample_number,:,:,:]
+            input_upper_bound = dataset.image_upper_bounds[sample_number:sample_number,:,:,:]
+            offset_low = dataset.offset_lower_bounds[sample_number]
+            offset_high = dataset.offset_upper_bounds[sample_number]
+            angle_low = dataset.angle_lower_bounds[sample_number]
+            angle_high = dataset.angle_upper_bounds[sample_number]
+            summary_item = Dict()
+            summary_item[:OffsetMin] = offset_low
+            summary_item[:OffsetMax] = offset_high
+            summary_item[:AngleMin] = angle_low
+            summary_item[:AngleMax] = angle_high
+
+            result_dict = MIPVerify.find_range_for_outputs(
+                nn,
+                input_lower_bound,
+                input_upper_bound,
+                main_solver,
+                pp = pp,
+                tightening_algorithm = tightening_algorithm,
+                tightening_solver = tightening_solver,
+            )
+            summary_item[:OffsetMinSolved] = result_dict[:OffsetMin][:ObjectiveValue]
+            summary_item[:OffsetMaxSolved] = result_dict[:OffsetMax][:ObjectiveValue]
+            summary_item[:AngleMinSolved] = result_dict[:AngleMin][:ObjectiveValue]
+            summary_item[:AngleMaxSolved] = result_dict[:AngleMax][:ObjectiveValue]
+            summary_item[:OffsetMinStatus] = result_dict[:OffsetMin][:SolveStatus]
+            summary_item[:OffsetMaxStatus] = result_dict[:OffsetMax][:SolveStatus]
+            summary_item[:AngleMinStatus] = result_dict[:AngleMin][:SolveStatus]
+            summary_item[:AngleMaxStatus] = result_dict[:AngleMax][:SolveStatus]
+            summary_item[:SolveTime] = result_dict[:TotalTime]
+            save_to_csv_for_error(dataset.index[sample_number], thread_summary_file_path, summary_item)
+            for setting in [:OffsetMin, :OffsetMax, :AngleMin, :AngleMax]
+                if result_dict[setting][:SolveStatus] != :Optimal
+                    append!(non_optimal_entries, sample_number)
+                    break
+                end
+            end
+        end
+    end
 
     # Report if any entry is not solved to optimal
     if !isempty(non_optimal_entries)

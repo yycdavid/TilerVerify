@@ -191,6 +191,7 @@ def partial_dataset(dataset, index_range):
     start = index_range[0]
     finish = index_range[1]
     sub_dataset = {}
+    sub_dataset['index'] = np.array(range(start, finish))
     for key in ['image_upper_bounds', 'image_lower_bounds', 'images']:
         sub_dataset[key] = dataset[key][start:finish,:,:]
     for key in ['offset_upper_bounds', 'offset_lower_bounds', 'angle_lower_bounds', 'angle_upper_bounds', 'offsets', 'angles']:
