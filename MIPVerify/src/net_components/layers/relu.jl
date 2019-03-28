@@ -21,4 +21,5 @@ function Base.show(io::IO, p::ReLU)
 end
 
 (p::ReLU)(x::Array{<:Real}) = relu(x)
-(p::ReLU)(x::Array{<:JuMPLinearType}) = (info(MIPVerify.LOGGER, "Applying $p ..."); relu(x, nta = p.tightening_algorithm))
+#(p::ReLU)(x::Array{<:JuMPLinearType}) = (info(MIPVerify.LOGGER, "Applying $p ..."); relu(x, nta = p.tightening_algorithm))
+(p::ReLU)(x::Array{<:JuMPLinearType}) = (relu(x, nta = p.tightening_algorithm))

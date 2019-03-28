@@ -106,7 +106,7 @@ end
 """
 $(SIGNATURES)
 
-Computes the result of applying the pooling function `params.pooling_function` to 
+Computes the result of applying the pooling function `params.pooling_function` to
 non-overlapping cells of `input` with sizes specified in `params.strides`.
 """
 function pool(
@@ -116,4 +116,5 @@ function pool(
 end
 
 (p::Pool)(x::Array{<:Real}) = MIPVerify.pool(x, p)
-(p::Pool)(x::Array{<:JuMPLinearType}) = (info(MIPVerify.LOGGER, "Specifying $p ... "); MIPVerify.pool(x, p))
+#(p::Pool)(x::Array{<:JuMPLinearType}) = (info(MIPVerify.LOGGER, "Specifying $p ... "); MIPVerify.pool(x, p))
+(p::Pool)(x::Array{<:JuMPLinearType}) = (MIPVerify.pool(x, p))

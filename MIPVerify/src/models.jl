@@ -198,7 +198,7 @@ function get_reusable_model_max_error(
     model_filepath = joinpath(model_dir, filename)
 
     if isfile(model_filepath) && !rebuild
-        notice(MIPVerify.LOGGER, "Loading model from cache.")
+        #notice(MIPVerify.LOGGER, "Loading model from cache.")
         d = open(model_filepath, "r") do f
             deserialize(f)
             # TODO (vtjeng): Identify situations where the saved model has a different name and throw and error.
@@ -206,12 +206,12 @@ function get_reusable_model_max_error(
         d[:TighteningApproach] = "loaded_from_cache"
         d[:Model].ext[:MIPVerify] = MIPVerifyExt(tightening_algorithm)
     else
-        notice(MIPVerify.LOGGER, """
-        Rebuilding model from scratch. This may take some time as we determine upper and lower bounds for the input to each non-linear unit.""")
+        #=notice(MIPVerify.LOGGER, """
+        Rebuilding model from scratch. This may take some time as we determine upper and lower bounds for the input to each non-linear unit.""")=#
         d = build_reusable_model_for_max_error(nn, input_lower_bound, input_upper_bound, pp, tightening_solver, tightening_algorithm)
         if cache_model
-            notice(MIPVerify.LOGGER, """
-            The model built will be cached and re-used for future solves, unless you explicitly set rebuild=true.""")
+            #notice(MIPVerify.LOGGER, """
+            #The model built will be cached and re-used for future solves, unless you explicitly set rebuild=true.""")
             open(model_filepath, "w") do f
                  serialize(f, d)
             end

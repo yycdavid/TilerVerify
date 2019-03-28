@@ -59,14 +59,14 @@ bound_operator = Dict(
 )
 
 """
-Calculates a tight bound of type `bound_type` on the variable `x` using the specified 
+Calculates a tight bound of type `bound_type` on the variable `x` using the specified
 tightening algorithm `nta`.
 
 If an upper bound is proven to be below cutoff, or a lower bound is proven to above cutoff,
 the algorithm returns early with whatever value was found.
 """
 function tight_bound(
-    x::JuMPLinearType, 
+    x::JuMPLinearType,
     nta::Nullable{TighteningAlgorithm},
     bound_type::BoundType,
     cutoff::Real)
@@ -86,20 +86,20 @@ function tight_bound(
         b = getobjectivebound(model)
         log_gap(model)
     else
-        warn(MIPVerify.LOGGER, "Unexpected solve status $(status) while tightening via $(tightening_algorithm); using interval_arithmetic to obtain upperbound.")
+        #warn(MIPVerify.LOGGER, "Unexpected solve status $(status) while tightening via $(tightening_algorithm); using interval_arithmetic to obtain upperbound.")
         b = b_0
     end
     db = bound_delta_f[bound_type](b, b_0)
-    debug(MIPVerify.LOGGER, "  Δu = $(db)")
+    #debug(MIPVerify.LOGGER, "  Δu = $(db)")
     if db < 0
         b = b_0
-        info(MIPVerify.LOGGER, "Tightening via interval_arithmetic gives a better result than $(tightening_algorithm); using best bound found.")
+        #info(MIPVerify.LOGGER, "Tightening via interval_arithmetic gives a better result than $(tightening_algorithm); using best bound found.")
     end
     return b
 end
 
 function tight_upperbound(
-    x::JuMPLinearType; 
+    x::JuMPLinearType;
     nta::Nullable{TighteningAlgorithm} = Nullable{TighteningAlgorithm}(),
     cutoff::Real = -Inf)
     tight_bound(x, nta, upper_bound_type, cutoff)
@@ -114,7 +114,7 @@ end
 
 function log_gap(m::JuMP.Model)
     gap = abs(1-getobjectivebound(m)/getobjectivevalue(m))
-    info(MIPVerify.LOGGER, "Hit user limit during solve to determine bounds. Multiplicative gap was $gap.")
+    #info(MIPVerify.LOGGER, "Hit user limit during solve to determine bounds. Multiplicative gap was $gap.")
 end
 
 function relu(x::T)::T where {T<:Real}
@@ -127,9 +127,9 @@ end
 
 function relu(x::T, l::Real, u::Real)::JuMP.AffExpr where {T<:JuMPLinearType}
     if u<l
-        # TODO (vtjeng): This check is in place in case of numerical error in the calculation of bounds. 
+        # TODO (vtjeng): This check is in place in case of numerical error in the calculation of bounds.
         # See sample number 4872 (1-indexed) when verified on the lp0.4 network.
-        warn(MIPVerify.LOGGER, "Inconsistent upper and lower bounds: u-l = $(u-l) is negative. Attempting to use interval arithmetic bounds instead ...")
+        #warn(MIPVerify.LOGGER, "Inconsistent upper and lower bounds: u-l = $(u-l) is negative. Attempting to use interval arithmetic bounds instead ...")
         u=upperbound(x)
         l=lowerbound(x)
     end
@@ -140,7 +140,7 @@ function relu(x::T, l::Real, u::Real)::JuMP.AffExpr where {T<:JuMPLinearType}
     elseif u==l
         return one(T)*l
     elseif u<l
-        error(MIPVerify.LOGGER, "Inconsistent upper and lower bounds even after using only interval arithmetic: u-l = $(u-l) is negative")
+        #error(MIPVerify.LOGGER, "Inconsistent upper and lower bounds even after using only interval arithmetic: u-l = $(u-l) is negative")
     elseif l >= 0
         # rectified value is always x
         return x
@@ -200,7 +200,7 @@ Calculates the lowerbound only if `u` is positive; otherwise, returns `u` (since
 the ReLU to be fixed to zero anyway.
 """
 function lazy_tight_lowerbound(
-    x::JuMPLinearType, u::Real; 
+    x::JuMPLinearType, u::Real;
     nta::Nullable{TighteningAlgorithm} = Nullable{TighteningAlgorithm}(),
     cutoff=0
     )::Real
@@ -215,13 +215,14 @@ end
 
 """
 $(SIGNATURES)
-Expresses a rectified-linearity constraint: output is constrained to be equal to 
+Expresses a rectified-linearity constraint: output is constrained to be equal to
 `max(x, 0)`.
 """
 function relu(
-    x::AbstractArray{T}; 
+    x::AbstractArray{T};
     nta::Nullable{TighteningAlgorithm} = Nullable{TighteningAlgorithm}())::Array{JuMP.AffExpr} where {T<:JuMPLinearType}
-    show_progress_bar::Bool = MIPVerify.LOGGER.levels[MIPVerify.LOGGER.level] > MIPVerify.LOGGER.levels["debug"]
+    #show_progress_bar::Bool = MIPVerify.LOGGER.levels[MIPVerify.LOGGER.level] > MIPVerify.LOGGER.levels["debug"]
+    show_progress_bar::Bool = false
     if !show_progress_bar
         u = tight_upperbound.(x, nta=nta, cutoff=0)
         l = lazy_tight_lowerbound.(x, u, nta=nta, cutoff=0)
@@ -233,7 +234,7 @@ function relu(
         l = map(v -> (next!(p2); lazy_tight_lowerbound(v..., nta=nta, cutoff=0)), zip(x, u))
 
         reluinfo = ReLUInfo(l, u)
-        info(MIPVerify.LOGGER, "$reluinfo")
+        #info(MIPVerify.LOGGER, "$reluinfo")
 
         p3 = Progress(length(x), desc="  Imposing relu constraint: ")
         return x_r = map(v -> (next!(p3); relu(v...)), zip(x, l, u))
@@ -266,17 +267,17 @@ end
 
 """
 $(SIGNATURES)
-Expresses a masked rectified-linearity constraint, with three possibilities depending on 
+Expresses a masked rectified-linearity constraint, with three possibilities depending on
 the value of the mask. Output is constrained to be:
 ```
-1) max(x, 0) if m=0, 
+1) max(x, 0) if m=0,
 2) 0 if m<0
 3) x if m>0
 ```
 """
 function masked_relu(
-    x::AbstractArray{<:JuMPLinearType}, 
-    m::AbstractArray{<:Real}; 
+    x::AbstractArray{<:JuMPLinearType},
+    m::AbstractArray{<:Real};
     nta::Nullable{TighteningAlgorithm} = Nullable{TighteningAlgorithm}())::Array{JuMP.AffExpr}
     @assert(size(x) == size(m))
     s = size(m)
@@ -284,9 +285,9 @@ function masked_relu(
     zero_idx = Iterators.filter(i -> m[i]==0, CartesianRange(s)) |> collect
     d = Dict(zip(zero_idx, relu(x[zero_idx], nta=nta)))
 
-    # We determine the output of the masked relu, which is either: 
-    #  1) the output of the relu that we have previously determined when adding the 
-    #     constraints to the model. 
+    # We determine the output of the masked relu, which is either:
+    #  1) the output of the relu that we have previously determined when adding the
+    #     constraints to the model.
     #  2, 3) the result of applying the (elementwise) masked_relu function.
     return map(i -> m[i] == 0 ? d[i] : masked_relu(x[i], m[i]), CartesianRange(s))
 end
@@ -328,14 +329,14 @@ function maximum(xs::AbstractArray{T})::JuMP.AffExpr where {T<:JuMPLinearType}
 
     if l==u
         return one(T)*l
-        info(MIPVerify.LOGGER, "Output of maximum is constant.")
+        #info(MIPVerify.LOGGER, "Output of maximum is constant.")
     end
     # at least one index will satisfy this property because of check above.
     filtered_indexes = us .> l
-    
+
     # TODO (vtjeng): Smarter log output if maximum function is being used more than once (for example, in a max-pooling layer).
-    info(MIPVerify.LOGGER, "Number of inputs to maximum function possibly taking maximum value: $(filtered_indexes |> sum)")
-    
+    #info(MIPVerify.LOGGER, "Number of inputs to maximum function possibly taking maximum value: $(filtered_indexes |> sum)")
+
     return maximum(xs[filtered_indexes], ls[filtered_indexes], us[filtered_indexes])
 end
 
@@ -348,7 +349,7 @@ function maximum(
     @assert length(xs)>0
     @assert length(xs)==length(ls)
     @assert length(xs)==length(us)
-    
+
     if all(is_constant.(xs))
         return maximum_of_constants(xs)
     end
@@ -373,7 +374,7 @@ end
 
 """
 $(SIGNATURES)
-Expresses a one-sided maximization constraint: output is constrained to be at least 
+Expresses a one-sided maximization constraint: output is constrained to be at least
 `max(xs)`.
 
 Only use when you are minimizing over the output in the objective.
@@ -424,7 +425,7 @@ function get_target_indexes(
     target_index::Integer,
     array_length::Integer;
     invert_target_selection::Bool = false)
-    
+
     get_target_indexes([target_index], array_length, invert_target_selection = invert_target_selection)
 
 end
@@ -436,7 +437,7 @@ function get_target_indexes(
 
     @assert length(target_indexes) >= 1
     @assert all(target_indexes .>= 1) && all(target_indexes .<= array_length)
-    
+
     invert_target_selection ?
         filter((x) -> x ∉ target_indexes, 1:array_length) :
         target_indexes
@@ -453,7 +454,7 @@ function get_vars_for_max_index(
     other_vars = xs[Bool[i∉target_indexes for i = 1:length(xs)]]
 
     maximum_target_var = length(target_vars) == 1 ?
-        target_vars[1] :    
+        target_vars[1] :
         MIPVerify.maximum(target_vars)
 
     return (maximum_target_var, other_vars)
@@ -462,7 +463,7 @@ end
 """
 $(SIGNATURES)
 
-Imposes constraints ensuring that one of the elements at the target_indexes is the 
+Imposes constraints ensuring that one of the elements at the target_indexes is the
 largest element of the array x. More specifically, we require `x[j] - x[i] ≥ tolerance` for
 some `j ∈ target_indexes` and for all `i ∉ target_indexes`.
 """

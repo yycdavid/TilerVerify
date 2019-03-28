@@ -185,6 +185,34 @@ function initialize_batch_solve_for_error(
     return (main_path, summary_file_path, dt)
 end
 
+function initialize_batch_solve_for_error_parallel(
+    save_path::String,
+    offset_grid_num::Integer,
+    angle_grid_num::Integer,
+    grid_size::Real,
+    )::Tuple{String,Array{String, 1},String,DataFrames.DataFrame}
+
+    offset_range = Integer(offset_grid_num*grid_size/2)
+    angle_range = Integer(angle_grid_num*grid_size/2)
+    batch_run_parameters = "offset_$(offset_range)_angle_$(angle_range)_grid_size_$(grid_size)"
+    main_path = joinpath(save_path, batch_run_parameters |> string)
+    main_path |> mkpath_if_not_present
+
+    summary_file_paths = []
+    for i in 1:Threads.nthreads()
+        summary_file_name = "summary_$(i).csv"
+        summary_file_path = joinpath(main_path, summary_file_name)
+        summary_file_path|> create_summary_file_if_not_present_for_error
+        push!(summary_file_paths, summary_file_path)
+    end
+
+    summary_file_name = "summary.csv"
+    summary_file_path = joinpath(main_path, summary_file_name)
+    summary_file_path|> create_summary_file_if_not_present_for_error
+    dt = CSV.read(summary_file_path)
+    return (main_path, summary_file_paths, summary_file_path, dt)
+end
+
 function save_to_disk(
     sample_number::Integer,
     main_path::String,
@@ -482,7 +510,6 @@ function batch_find_error_bound(
         dataset.grid_size
         )
     num_entries = MIPVerify.num_samples(dataset)
-
     non_optimal_entries = []
     for sample_number in 1:num_entries
         if run_on_sample_for_untargeted_attack(sample_number, dt, solve_rerun_option)
@@ -546,5 +573,98 @@ function batch_find_error_bound(
     else
         println("All samples are solved to optimal.")
     end
+    return nothing
+end
+
+
+function batch_find_error_bound_parallel(
+    nns::Array{<:NeuralNet, 1},
+    dataset::MIPVerify.RangeDataset,
+    main_solvers::Array{<:MathProgBase.SolverInterface.AbstractMathProgSolver, 1},
+    tightening_solvers::Array{<:MathProgBase.SolverInterface.AbstractMathProgSolver, 1};
+    save_path::String = ".",
+    solve_rerun_option::MIPVerify.SolveRerunOption = MIPVerify.never,
+    pp::MIPVerify.PerturbationFamily = MIPVerify.CustomPerturbationFamily(),
+    tightening_algorithm::MIPVerify.TighteningAlgorithm = DEFAULT_TIGHTENING_ALGORITHM,
+    )::Void
+
+    (main_path, summary_thread_paths, summary_overall_path, dt) = initialize_batch_solve_for_error_parallel(
+        save_path,
+        dataset.offset_grid_num,
+        dataset.angle_grid_num,
+        dataset.grid_size
+        )
+    num_entries = MIPVerify.num_samples(dataset)
+    non_optimal_entries = []
+    time_spent = @elapsed begin
+        Threads.@threads for sample_number in 1:60
+            if run_on_sample_for_untargeted_attack(sample_number, dt, solve_rerun_option)
+                nn = nns[Threads.threadid()]
+                main_solver = main_solvers[Threads.threadid()]
+                tightening_solver = tightening_solvers[Threads.threadid()]
+                #info(MIPVerify.LOGGER, "Working on index $(sample_number)")
+
+                input_lower_bound = dataset.image_lower_bounds[sample_number:sample_number,:,:,:]
+                input_upper_bound = dataset.image_upper_bounds[sample_number:sample_number,:,:,:]
+                offset_low = dataset.offset_lower_bounds[sample_number]
+                offset_high = dataset.offset_upper_bounds[sample_number]
+                angle_low = dataset.angle_lower_bounds[sample_number]
+                angle_high = dataset.angle_upper_bounds[sample_number]
+                summary_item = Dict()
+                summary_item[:OffsetMin] = offset_low
+                summary_item[:OffsetMax] = offset_high
+                summary_item[:AngleMin] = angle_low
+                summary_item[:AngleMax] = angle_high
+
+                result_dict = MIPVerify.find_range_for_outputs(
+                    nn,
+                    input_lower_bound,
+                    input_upper_bound,
+                    main_solver,
+                    pp = pp,
+                    tightening_algorithm = tightening_algorithm,
+                    tightening_solver = tightening_solver,
+                )
+                summary_item[:OffsetMinSolved] = result_dict[:OffsetMin][:ObjectiveValue]
+                summary_item[:OffsetMaxSolved] = result_dict[:OffsetMax][:ObjectiveValue]
+                summary_item[:AngleMinSolved] = result_dict[:AngleMin][:ObjectiveValue]
+                summary_item[:AngleMaxSolved] = result_dict[:AngleMax][:ObjectiveValue]
+                summary_item[:OffsetMinStatus] = result_dict[:OffsetMin][:SolveStatus]
+                summary_item[:OffsetMaxStatus] = result_dict[:OffsetMax][:SolveStatus]
+                summary_item[:AngleMinStatus] = result_dict[:AngleMin][:SolveStatus]
+                summary_item[:AngleMaxStatus] = result_dict[:AngleMax][:SolveStatus]
+                summary_item[:SolveTime] = result_dict[:TotalTime]
+                save_to_csv_for_error(sample_number, summary_thread_paths[Threads.threadid()], summary_item)
+                for setting in [:OffsetMin, :OffsetMax, :AngleMin, :AngleMax]
+                    if result_dict[setting][:SolveStatus] != :Optimal
+                        append!(non_optimal_entries, sample_number)
+                        break
+                    end
+                end
+            end
+        end
+    end
+
+    #=
+    # Get error matrix
+    summary_dt = CSV.read(summary_overall_path)
+    offset_errors = max.(summary_dt[:OffsetMaxSolved] - summary_dt[:OffsetMin], summary_dt[:OffsetMax] - summary_dt[:OffsetMinSolved])
+    angle_errors = max.(summary_dt[:AngleMaxSolved] - summary_dt[:AngleMin], summary_dt[:AngleMax] - summary_dt[:AngleMinSolved])
+    error_result = Dict()
+    error_result["offset_errors"] = offset_errors
+    error_result["angle_errors"] = angle_errors
+    error_result["offset_grid_num"] = dataset.offset_grid_num
+    error_result["angle_grid_num"] = dataset.angle_grid_num
+    matwrite(joinpath(main_path, "error_bound_result.mat"), error_result)
+    =#
+
+    # Report if any entry is not solved to optimal
+    if !isempty(non_optimal_entries)
+        println("There are samples not solved to optimal:\n")
+        println(non_optimal_entries)
+    else
+        println("All samples are solved to optimal.")
+    end
+    println("Time spent: $(time_spent)")
     return nothing
 end

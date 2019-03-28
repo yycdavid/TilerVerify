@@ -181,11 +181,66 @@ def gen_example_picture_with_range(viewer):
     img_upper = img_upper.convert("L")
     img_upper.save('test_upper.jpg')
 
+
+def get_viewer():
+    scene = image_generator.Scene(scene_params)
+    viewer = image_generator.Viewer(camera_params, scene)
+    return viewer
+
+def partial_dataset(dataset, index_range):
+    start = index_range[0]
+    finish = index_range[1]
+    sub_dataset = {}
+    for key in ['image_upper_bounds', 'image_lower_bounds', 'images']:
+        sub_dataset[key] = dataset[key][start:finish,:,:]
+    for key in ['offset_upper_bounds', 'offset_lower_bounds', 'angle_lower_bounds', 'angle_upper_bounds', 'offsets', 'angles']:
+        sub_dataset[key] = dataset[key][start:finish]
+
+    return sub_dataset
+
+def gen_data_for_verify_parallel(offset_rng, angle_rng, grid_size, num_threads):
+    viewer = get_viewer()
+    offset_range = [-offset_rng, offset_rng]
+    angle_range = [-angle_rng, angle_rng]
+    offset_grid_num = int(2*offset_rng/grid_size)
+    angle_grid_num = int(2*angle_rng/grid_size)
+    dataset = generate_dataset_for_verify(viewer, offset_range, angle_range, offset_grid_num, angle_grid_num)
+
+    data_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'data')
+    if not os.path.exists(data_dir):
+        print("Creating {}".format(data_dir))
+        os.makedirs(data_dir)
+
+    save_dir = os.path.join(data_dir, 'verify_offset_{}_angle_{}_grid_{}_thread_{}'.format(offset_rng, angle_rng, grid_size, num_threads))
+    if not os.path.exists(save_dir):
+        print("Creating {}".format(save_dir))
+        os.makedirs(save_dir)
+
+    if os.path.isfile(os.path.join(save_dir, 'info.mat')):
+        print('Dataset for verify is already generated, skip the generation')
+    else:
+        # Split the dataset to separate files
+        N = dataset['offsets'].shape[0]
+        n_per_core = N//num_threads +1
+        range_list = [(i*n_per_core, min((i+1)*n_per_core, N)) for i in range(num_threads)]
+        for i in range(num_threads):
+            sub_dataset = partial_dataset(dataset, range_list[i])
+            sio.savemat(os.path.join(save_dir, 'thread_{}.mat'.format(i)), sub_dataset)
+        # Store the grid num and range information
+        info = {}
+        info['offset_grid_num'] = dataset['offset_grid_num']
+        info['angle_grid_num'] = dataset['angle_grid_num']
+        info['offset_range'] = offset_rng
+        info['angle_range'] = angle_rng
+        sio.savemat(os.path.join(save_dir, 'info.mat'), info)
+
+
+
 def main():
     scene = image_generator.Scene(scene_params)
     viewer = image_generator.Viewer(camera_params, scene)
 
-    """
+
     parser = argparse.ArgumentParser(description='Dataset generation')
     parser.add_argument('--range', type=int, help='Range for offset and angle, for generating test datasets')
     parser.add_argument('--grid_size', type=float, help='Grid size for calculating error')
@@ -193,9 +248,9 @@ def main():
 
     gen_test_data_for_error_est(viewer, args.range, args.grid_size)
     gen_test_data_for_verify(viewer, args.range, args.grid_size)
-    """
 
-    gen_train_valid_data(viewer)
+
+    #gen_train_valid_data(viewer)
 
     #gen_example_picture(viewer)
 

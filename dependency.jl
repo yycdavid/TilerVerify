@@ -1,0 +1,7 @@
+Pkg.add("ConditionalJuMP")
+Pkg.add("Memento")
+Pkg.add("AutoHashEquals")
+Pkg.add("DocStringExtensions")
+Pkg.add("ProgressMeter")
+Pkg.add("CSV")
+Pkg.add("MAT")

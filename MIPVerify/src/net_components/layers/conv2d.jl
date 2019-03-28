@@ -93,7 +93,7 @@ $(SIGNATURES)
 
 Computes the result of convolving `input` with the `filter` and `bias` stored in `params`.
 
-Mirrors `tf.nn.conv2d` from the `tensorflow` package, with `strides = [1, 1, 1, 1], 
+Mirrors `tf.nn.conv2d` from the `tensorflow` package, with `strides = [1, 1, 1, 1],
 padding = 'SAME'`.
 
 # Throws
@@ -104,19 +104,19 @@ function conv2d(
     params::Conv2d{U, V}) where {T<:JuMPReal, U<:JuMPReal, V<:JuMPReal}
 
     if T<:JuMPLinearType || U<:JuMPLinearType || V<:JuMPLinearType
-        info(MIPVerify.LOGGER, "Applying $(params) ... ")
+        #info(MIPVerify.LOGGER, "Applying $(params) ... ")
     end
     filter = params.filter
     stride = params.stride
 
     (batch, in_height, in_width, input_in_channels) = size(input)
     (filter_height, filter_width, filter_in_channels, filter_out_channels) = size(filter)
-    
+
     @assert(
-        input_in_channels == filter_in_channels, 
+        input_in_channels == filter_in_channels,
         "Number of channels in input, $input_in_channels, does not match number of channels, $filter_in_channels, that filters operate on."
     )
-    
+
     out_height = round(Int, in_height/stride, RoundUp)
     out_width = round(Int, in_width/stride, RoundUp)
     output_size = (batch, out_height, out_width, filter_out_channels)
