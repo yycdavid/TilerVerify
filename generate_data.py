@@ -7,6 +7,7 @@ from tqdm import tqdm
 import scipy.io as sio
 import argparse
 import math
+import multiprocessing as mp
 
 # 1 Unit = 5 centimeters
 scene_params = {
@@ -199,6 +200,59 @@ def partial_dataset(dataset, index_range):
 
     return sub_dataset
 
+def generate_partial_dataset(offset_range, angle_range, offset_grid_num, angle_grid_num, index_range, thread_num, save_dir):
+    # offset_range and angle_range are list, [low, high]
+    offset_grid_size = (offset_range[1] - offset_range[0])/offset_grid_num
+    angle_grid_size = (angle_range[1] - angle_range[0])/angle_grid_num
+    offset_delta = offset_grid_size / 2
+    angle_delta = angle_grid_size / 2
+    image_lower_bounds = []
+    image_upper_bounds = []
+    offset_lower_bounds = []
+    offset_upper_bounds = []
+    angle_lower_bounds = []
+    angle_upper_bounds = []
+    images = []
+    offsets = []
+    angles = []
+    start = index_range[0]
+    finish = index_range[1]
+    sub_dataset = {}
+    sub_dataset['index'] = np.array(range(start, finish))
+    viewer = get_viewer()
+    for index in tqdm(range(start, finish)):
+        i = index // angle_grid_num
+        j = index % angle_grid_num
+        offset = offset_range[0] + i * offset_grid_size + offset_delta
+        angle = angle_range[0] + j * angle_grid_size + angle_delta
+        image, lower_bound_matrix, upper_bound_matrix = viewer.take_picture_with_range(offset, angle, offset_delta, angle_delta)
+        image_lower_bounds.append(np.expand_dims(lower_bound_matrix, axis=0))
+        image_upper_bounds.append(np.expand_dims(upper_bound_matrix, axis=0))
+        images.append(np.expand_dims(image, axis=0))
+        offset_lower_bounds.append(offset - offset_delta)
+        offset_upper_bounds.append(offset + offset_delta)
+        offsets.append(offset)
+        angle_lower_bounds.append(angle - angle_delta)
+        angle_upper_bounds.append(angle + angle_delta)
+        angles.append(angle)
+
+    sub_dataset['image_lower_bounds'] = np.concatenate(image_lower_bounds, axis=0) # (N, H, W)
+    sub_dataset['image_upper_bounds'] = np.concatenate(image_upper_bounds, axis=0) # (N, H, W)
+    sub_dataset['offset_lower_bounds'] = np.array(offset_lower_bounds) # (N,)
+    sub_dataset['offset_upper_bounds'] = np.array(offset_upper_bounds) # (N,)
+    sub_dataset['angle_lower_bounds'] = np.array(angle_lower_bounds) # (N,)
+    sub_dataset['angle_upper_bounds'] = np.array(angle_upper_bounds) # (N,)
+    sub_dataset['images'] = np.concatenate(images, axis=0) # (N, H, W)
+    sub_dataset['offsets'] = np.array(offsets) # (N,)
+    sub_dataset['angles'] = np.array(angles) # (N,)
+    sub_dataset['offset_grid_num'] = offset_grid_num
+    sub_dataset['angle_grid_num'] = angle_grid_num
+
+    sio.savemat(os.path.join(save_dir, 'thread_{}.mat'.format(thread_num)), sub_dataset)
+
+    return True
+
+'''
 def gen_data_for_verify_parallel(offset_rng, angle_rng, grid_size, num_threads):
     viewer = get_viewer()
     offset_range = [-offset_rng, offset_rng]
@@ -234,6 +288,43 @@ def gen_data_for_verify_parallel(offset_rng, angle_rng, grid_size, num_threads):
         info['offset_range'] = offset_rng
         info['angle_range'] = angle_rng
         sio.savemat(os.path.join(save_dir, 'info.mat'), info)
+'''
+
+def gen_data_for_verify_parallel(offset_rng, angle_rng, grid_size, num_threads):
+    offset_range = [-offset_rng, offset_rng]
+    angle_range = [-angle_rng, angle_rng]
+    offset_grid_num = int(2*offset_rng/grid_size)
+    angle_grid_num = int(2*angle_rng/grid_size)
+
+    data_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'data')
+    if not os.path.exists(data_dir):
+        print("Creating {}".format(data_dir))
+        os.makedirs(data_dir)
+
+    save_dir = os.path.join(data_dir, 'verify_offset_{}_angle_{}_grid_{}_thread_{}'.format(offset_rng, angle_rng, grid_size, num_threads))
+    if not os.path.exists(save_dir):
+        print("Creating {}".format(save_dir))
+        os.makedirs(save_dir)
+
+    if os.path.isfile(os.path.join(save_dir, 'info.mat')):
+        print('Dataset for verify is already generated, skip the generation')
+    else:
+        # Store the grid num and range information
+        info = {}
+        info['offset_grid_num'] = offset_grid_num
+        info['angle_grid_num'] = angle_grid_num
+        info['offset_range'] = offset_rng
+        info['angle_range'] = angle_rng
+        sio.savemat(os.path.join(save_dir, 'info.mat'), info)
+
+        # Split the dataset to separate files
+        N = offset_grid_num * angle_grid_num
+        n_per_core = N//num_threads +1
+        range_list = [(i*n_per_core, min((i+1)*n_per_core, N)) for i in range(num_threads)]
+        pool = mp.Pool(processes=num_threads)
+        results = [pool.apply_async(generate_partial_dataset, args=(offset_range, angle_range, offset_grid_num, angle_grid_num, index_range, thread_num, save_dir)) for (thread_num, index_range) in enumerate(range_list)]
+        for i in range(num_threads):
+            retval = results[i].get()
 
 
 

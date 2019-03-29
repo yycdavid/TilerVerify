@@ -24,7 +24,7 @@ OFFSET_RANGE=40
 ANGLE_RANGE=45
 grid_size=0.1
 exp_name=big_100000
-for num_threads in 30
+for num_threads in 20
 do
     export JULIA_NUM_THREADS=$num_threads
     # Generate dataset for estimate and bound
