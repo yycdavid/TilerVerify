@@ -640,6 +640,8 @@ function batch_find_error_bound_thread(
     else
         println("All samples are solved to optimal.")
     end
-    println("Time for this thread is $(time_spent)")
+    io = open(joinpath(save_path, "time.txt"), "a")
+    write(io, "Time for this thread is $(time_spent)")
+    close(io)
     return nothing
 end
