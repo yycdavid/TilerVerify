@@ -38,7 +38,8 @@ do
     wait
     /raid/yicheny/software/julia-9d11f62bcb/bin/julia thread_collect.jl $data_name $num_threads
     # Compute estimate
-    #python3 trainer/error_estimate.py --exp_name big_100000 --data test_error_est_"$RANGE"_"$grid_size".mat --grid_size $grid_size
+    #python3 generate_dataset --mode estimate --offset_range $OFFSET_RANGE --angle_range $ANGLE_RANGE --grid_size $grid_size --target_dir_name $data_name
+    #python3 trainer/error_estimate.py --exp_name big_100000 --target_dir_name $data_name --grid_size $grid_size
     # Compute statistics and save
     #python3 analysis/statistics.py --exp_name big_100000/offset_"$RANGE"_angle_"$RANGE"_grid_size_"$grid_size"
 done

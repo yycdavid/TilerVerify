@@ -27,17 +27,16 @@ Can you make the error bound tighter in this framework: grid size against error
 In a reasonable setting and a reasonable input space, our method can give a bound of 5 percent of the input
 range.  
 
-(3.25-3.30)
-- Setup the experiment on clusters, use parallelism (3.25,26)
-- Run experiments for a larger range (potentially a different scene and camera settings) (3.26)
-- Measuring bound closeness by taking difference between bound and actual and divide by range for measurement. (3.27)
-- Progressive tiling/adaptive grid size selection (3.27-30)
+
+- Heatmap for error bound and error estimate for both offset and angle. (DONE)
+- Generate dataset and evaluate for error estimate (DONE)
+- Compute statistics on global error bound and estimate as a value and as a percentage over the measurement range
+- Plot this global error bound percentage and global error estimate percentage varying with grid size.
+- Plot the time for verify against grid size.
 
 (4.1-7)
-- Run experiments
+- Run experiments, plot results
+- Progressive tiling/adaptive grid size selection
 
 (4.7-21)
 - Write up
-
-Test in rhino
-Test mounting

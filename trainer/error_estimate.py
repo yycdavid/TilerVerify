@@ -32,7 +32,7 @@ def compute_error(model, device, test_loader):
 def main():
     parser = argparse.ArgumentParser(description='Compute estimated error on test set')
     parser.add_argument('--exp_name', help='name of experiment to compute error')
-    parser.add_argument('--data', help='dataset file to compute error on')
+    parser.add_argument('--target_dir_name', help='directory name where the dataset file locates')
     parser.add_argument('--grid_size', type=float, help='Grid size of the dataset')
     args = parser.parse_args()
     base_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
@@ -56,9 +56,10 @@ def main():
     ]))
     cnn_small_torch.load_state_dict(torch.load(model_file_path, map_location="cpu"))
 
-    data_dir = os.path.join(base_dir, 'data', args.data)
+    save_dir = os.path.join(base_dir, 'data', args.target_dir_name)
+    data_path = os.path.join(save_dir, 'error_estimate_data.mat')
 
-    dataset = load_data(data_dir)
+    dataset = load_data(data_path)
 
     test_dataset = RoadSceneDataset(dataset['images'], np.squeeze(dataset['offsets']), np.squeeze(dataset['angles']))
     test_loader = torch.utils.data.DataLoader(
@@ -75,7 +76,7 @@ def main():
 
     offset_range = int(args.grid_size * dataset['offset_grid_num']/2)
     angle_range = int(args.grid_size * dataset['angle_grid_num']/2)
-    sio.savemat(os.path.join(exp_dir, 'offset_{}_angle_{}_grid_size_{}'.format(offset_range, angle_range, args.grid_size), 'error_est_result.mat'), error_result)
+    sio.savemat(os.path.join(save_dir, 'error_est_result.mat'), error_result)
 
 
 

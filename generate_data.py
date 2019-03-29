@@ -326,20 +326,41 @@ def gen_data_for_verify_parallel(offset_rng, angle_rng, grid_size, num_threads):
         for i in range(num_threads):
             retval = results[i].get()
 
+def gen_data_for_estimate(offset_rng, angle_rng, grid_size, target_dir_name):
+    data_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'data')
+    if not os.path.exists(data_dir):
+        print("Creating {}".format(data_dir))
+        os.makedirs(data_dir)
 
+    save_dir = os.path.join(data_dir, target_dir_name)
+    if not os.path.exists(save_dir):
+        print("Creating {}".format(save_dir))
+        os.makedirs(save_dir)
+
+    # Generate a test set for error estimation
+    offset_range = [-offset_rng, offset_rng]
+    angle_range = [-angle_rng, angle_rng]
+    offset_grid_num = int(2*offset_rng/grid_size)
+    angle_grid_num = int(2*angle_rng/grid_size)
+    num_points_per_side = max(math.ceil(grid_size/0.05),10)
+    viewer = get_viewer()
+    dataset = generate_dataset_for_error_est(viewer, offset_range, angle_range, offset_grid_num, angle_grid_num, num_points_per_side)
+
+    sio.savemat(os.path.join(save_dir, 'error_estimate_data.mat'), dataset)
 
 def main():
-    scene = image_generator.Scene(scene_params)
-    viewer = image_generator.Viewer(camera_params, scene)
-
-
     parser = argparse.ArgumentParser(description='Dataset generation')
-    parser.add_argument('--range', type=int, help='Range for offset and angle, for generating test datasets')
+    parser.add_argument('--mode', type=string, help='Mode of generation, currently only support estimate')
+    parser.add_argument('--offset_range', type=int, help='Range for offset')
+    parser.add_argument('--angle_range', type=int, help='Range for angle')
     parser.add_argument('--grid_size', type=float, help='Grid size for calculating error')
+    parser.add_argument('--target_dir_name', type=string, help='Directory name to save the generated data')
     args = parser.parse_args()
 
-    gen_test_data_for_error_est(viewer, args.range, args.grid_size)
-    gen_test_data_for_verify(viewer, args.range, args.grid_size)
+    if args.mode == 'estimate':
+        gen_data_for_estimate(args.offset_range, args.angle_range, args.grid_size, args.target_dir_name)
+    else:
+        print("Generation mode not supported.")
 
 
     #gen_train_valid_data(viewer)
