@@ -5,6 +5,7 @@ import os
 import scipy.io as sio
 from collections import OrderedDict
 import numpy as np
+import pickle
 
 from train import RESULTS_ROOT
 from convert_for_milp import Flatten
@@ -13,7 +14,9 @@ from dataset import RoadSceneDataset
 
 
 def load_data(data_file):
-    return sio.loadmat(data_file)
+    with open(data_file, 'rb') as f:
+        data_dict = pickle.load(f)
+    return data_dict
 
 def compute_error(model, device, test_loader):
     model.eval()
@@ -57,7 +60,7 @@ def main():
     cnn_small_torch.load_state_dict(torch.load(model_file_path, map_location="cpu"))
 
     save_dir = os.path.join(base_dir, 'data', args.target_dir_name)
-    data_path = os.path.join(save_dir, 'error_estimate_data.mat')
+    data_path = os.path.join(save_dir, 'error_estimate_data.pickle')
 
     dataset = load_data(data_path)
 

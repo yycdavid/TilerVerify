@@ -16,6 +16,9 @@ for i in 1:(num_threads-1)
 end
 # Save to a single file
 overall_summary_path = joinpath(main_path, "summary.csv")
+if isfile(overall_summary_path)
+    rm(overall_summary_path)
+end
 CSV.write(overall_summary_path, summary_dt)
 
 

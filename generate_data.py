@@ -67,6 +67,65 @@ def generate_dataset_for_error_est(viewer, offset_range, angle_range, offset_gri
     dataset['angle_grid_num'] = angle_grid_num
     return dataset
 
+def generate_dataset_for_error_est_parallel(viewer, offset_range, angle_range, offset_grid_num, angle_grid_num, num_points_per_side):
+    # offset_range and angle_range are list, [low, high]
+    # returned dataset has order: innermost is within a grid, then varying angle, then varying offset
+    num_threads = 30
+    N = offset_grid_num * angle_grid_num * num_points_per_side * num_points_per_side
+    n_per_core = N//num_threads +1
+    range_list = [(i*n_per_core, min((i+1)*n_per_core, N)) for i in range(num_threads)]
+    pool = mp.Pool(processes=num_threads)
+    results = [pool.apply_async(generate_partial_est_dataset, args=(offset_range, angle_range, offset_grid_num, angle_grid_num, num_points_per_side, index_range)) for index_range in range_list]
+    sub_datasets = []
+    for i in range(num_threads):
+        sub_datasets.append(results[i].get())
+    for i in range(1, num_threads):
+        assert sub_datasets[i]['index'][0] > sub_datasets[i-1]['index'][0], "Result is out of order"
+
+    dataset = {}
+    dataset['images'] = np.concatenate([sub_datasets[i]['images'] for i in range(num_threads)], axis=0)
+    dataset['offsets'] = np.concatenate([sub_datasets[i]['offsets'] for i in range(num_threads)])
+    dataset['angles'] = np.concatenate([sub_datasets[i]['angles'] for i in range(num_threads)])
+    dataset['points_per_grid'] = num_points_per_side * num_points_per_side
+    dataset['offset_grid_num'] = offset_grid_num
+    dataset['angle_grid_num'] = angle_grid_num
+    return dataset
+
+def generate_partial_est_dataset(offset_range, angle_range, offset_grid_num, angle_grid_num, num_points_per_side, index_range):
+    # offset_range and angle_range are list, [low, high]
+    offset_grid_size = (offset_range[1] - offset_range[0])/offset_grid_num
+    angle_grid_size = (angle_range[1] - angle_range[0])/angle_grid_num
+    offset_point_space = offset_grid_size / num_points_per_side
+    angle_point_space = angle_grid_size / num_points_per_side
+    points_per_grid = num_points_per_side * num_points_per_side
+    images = []
+    offsets = []
+    angles = []
+    start = index_range[0]
+    finish = index_range[1]
+    sub_dataset = {}
+    sub_dataset['index'] = np.array(range(start, finish))
+    viewer = get_viewer()
+    for index in tqdm(range(start, finish)):
+        index_ij = index // points_per_grid
+        index_pq = index % points_per_grid
+        p = index_pq // num_points_per_side
+        q = index_pq % num_points_per_side
+        i = index_ij // angle_grid_num
+        j = index_ij % angle_grid_num
+        offset = offset_range[0] + i * offset_grid_size + p * offset_point_space + offset_point_space/2
+        angle = angle_range[0] + j * angle_grid_size + q * angle_point_space + angle_point_space/2
+        images.append(np.expand_dims(viewer.take_picture(offset, angle), axis=0))
+        offsets.append(offset)
+        angles.append(angle)
+
+    sub_dataset['images'] = np.concatenate(images, axis=0) # (N, H, W)
+    sub_dataset['offsets'] = np.array(offsets) # (N,)
+    sub_dataset['angles'] = np.array(angles) # (N,)
+
+    return sub_dataset
+
+
 def generate_dataset_for_verify(viewer, offset_range, angle_range, offset_grid_num, angle_grid_num):
     # offset_range and angle_range are list, [low, high]
     offset_grid_size = (offset_range[1] - offset_range[0])/offset_grid_num
@@ -342,19 +401,23 @@ def gen_data_for_estimate(offset_rng, angle_rng, grid_size, target_dir_name):
     angle_range = [-angle_rng, angle_rng]
     offset_grid_num = int(2*offset_rng/grid_size)
     angle_grid_num = int(2*angle_rng/grid_size)
-    num_points_per_side = max(math.ceil(grid_size/0.05),10)
+    num_points_per_side = min(math.ceil(grid_size/0.05),10)
     viewer = get_viewer()
-    dataset = generate_dataset_for_error_est(viewer, offset_range, angle_range, offset_grid_num, angle_grid_num, num_points_per_side)
+    dataset = generate_dataset_for_error_est_parallel(viewer, offset_range, angle_range, offset_grid_num, angle_grid_num, num_points_per_side)
 
-    sio.savemat(os.path.join(save_dir, 'error_estimate_data.mat'), dataset)
+    with open(os.path.join(save_dir, 'error_estimate_data.pickle'), 'wb') as f:
+        pickle.dump(dataset, f, protocol=pickle.HIGHEST_PROTOCOL)
+
+
+
 
 def main():
     parser = argparse.ArgumentParser(description='Dataset generation')
-    parser.add_argument('--mode', type=string, help='Mode of generation, currently only support estimate')
+    parser.add_argument('--mode', type=str, help='Mode of generation, currently only support estimate')
     parser.add_argument('--offset_range', type=int, help='Range for offset')
     parser.add_argument('--angle_range', type=int, help='Range for angle')
     parser.add_argument('--grid_size', type=float, help='Grid size for calculating error')
-    parser.add_argument('--target_dir_name', type=string, help='Directory name to save the generated data')
+    parser.add_argument('--target_dir_name', type=str, help='Directory name to save the generated data')
     args = parser.parse_args()
 
     if args.mode == 'estimate':

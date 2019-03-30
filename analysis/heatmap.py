@@ -16,13 +16,14 @@ def get_error_matrix(errors, points_per_grid, offset_grid_num, angle_grid_num):
     return np.reshape(max_errors, (offset_grid_num, angle_grid_num))
 
 def plot_heat_map(error_matrix, target_name, type, offset_range, angle_range, result_dir):
+    plt.figure()
     sns.set()
     ytick_space = offset_range*2//10
     xtick_space = angle_range*2//10
     offset_range = [-offset_range, offset_range]
     angle_range = [-angle_range, angle_range]
     yticks = np.arange(offset_range[0], offset_range[1]+1, ytick_space)
-    xticks = np.arange(angle_range[0], angle_range[1]+1, ytick_space)
+    xticks = np.arange(angle_range[0], angle_range[1]+1, xtick_space)
 
     ax = sns.heatmap(error_matrix, square=True, xticklabels=xticks, yticklabels=yticks)
     x_tick_position = (xticks - angle_range[0])/(angle_range[1] - angle_range[0])*ax.get_xlim()[1]
@@ -61,7 +62,7 @@ def main():
         os.makedirs(plots_dir)
     # Plot heatmap
     plot_heat_map(offset_error_matrix, 'offset', 'estimate', args.offset_range, args.angle_range, plots_dir)
-    plot_heat_map(offset_error_matrix, 'angle', 'estimate', args.offset_range, args.angle_range, plots_dir)
+    plot_heat_map(angle_error_matrix, 'angle', 'estimate', args.offset_range, args.angle_range, plots_dir)
 
     # Plot error bound maps
     error_bound_file_path = os.path.join(result_dir, 'error_bound_result.mat')
@@ -74,7 +75,7 @@ def main():
     offset_error_matrix = np.reshape(error_bound_result['offset_errors'], (offset_grid_num, angle_grid_num))
     angle_error_matrix = np.reshape(error_bound_result['angle_errors'], (offset_grid_num, angle_grid_num))
     plot_heat_map(offset_error_matrix, 'offset', 'bound', args.offset_range, args.angle_range, plots_dir)
-    plot_heat_map(offset_error_matrix, 'angle', 'bound', args.offset_range, args.angle_range, plots_dir)
+    plot_heat_map(angle_error_matrix, 'angle', 'bound', args.offset_range, args.angle_range, plots_dir)
 
 
 if __name__ == '__main__':
