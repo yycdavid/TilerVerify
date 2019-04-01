@@ -7,9 +7,6 @@ import seaborn as sns
 import h5py
 
 
-OFFSET_RANGE = [-10, 10]
-ANGLE_RANGE = [-10, 10]
-
 def get_error_matrix(errors, points_per_grid, offset_grid_num, angle_grid_num):
     # Reshape
     max_errors = np.max(np.reshape(errors, (-1, points_per_grid)), axis=1)

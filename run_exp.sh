@@ -19,27 +19,32 @@
 #    python3 analysis/statistics.py --exp_name 20_10000/offset_"$RANGE"_angle_"$RANGE"_grid_size_"$grid_size"
 #done
 
+TRAIN_DATA=train_bigger_130000.mat
+VALID_DATA=valid_bigger_1000.mat
+RESULT_FOLDER=big_130000
+python3 trainer/train.py --train_data $TRAIN_DATA --val_data $VALID_DATA --result $RESULT_FOLDER
+python3 trainer/convert_for_milp.py --name $RESULT_FOLDER
 
 OFFSET_RANGE=40
-ANGLE_RANGE=45
-grid_size=0.1
-exp_name=big_100000
-for num_threads in 20
+ANGLE_RANGE=60
+num_threads=20
+exp_name=big_130000
+for grid_size in 0.1
 do
     export JULIA_NUM_THREADS=$num_threads
     # Generate dataset for estimate and bound
-    #python3 parallel_verify.py --offset_range $OFFSET_RANGE --angle_range $ANGLE_RANGE --grid_size $grid_size --num_threads $num_threads
+    python3 parallel_verify.py --offset_range $OFFSET_RANGE --angle_range $ANGLE_RANGE --grid_size $grid_size --num_threads $num_threads
     # Compute bound by verify
     data_name=verify_offset_"$OFFSET_RANGE"_angle_"$ANGLE_RANGE"_grid_"$grid_size"_thread_"$num_threads"
-    #for thread_number in $(seq 0 $(expr $num_threads - 1))
-    #do
-    #    /raid/yicheny/software/julia-9d11f62bcb/bin/julia verify_thread.jl $exp_name $data_name $thread_number &
-    #done
-    #wait
-    #/raid/yicheny/software/julia-9d11f62bcb/bin/julia thread_collect.jl $data_name $num_threads
+    for thread_number in $(seq 0 $(expr $num_threads - 1))
+    do
+        /raid/yicheny/software/julia-9d11f62bcb/bin/julia verify_thread.jl $exp_name $data_name $thread_number &
+    done
+    wait
+    /raid/yicheny/software/julia-9d11f62bcb/bin/julia thread_collect.jl $data_name $num_threads
     # Compute estimate
-    #python3 generate_data.py --mode estimate --offset_range $OFFSET_RANGE --angle_range $ANGLE_RANGE --grid_size $grid_size --target_dir_name $data_name
-    #python3 trainer/error_estimate.py --exp_name big_100000 --target_dir_name $data_name --grid_size $grid_size
+    python3 generate_data.py --mode estimate --offset_range $OFFSET_RANGE --angle_range $ANGLE_RANGE --grid_size $grid_size --target_dir_name $data_name
+    python3 trainer/error_estimate.py --exp_name big_100000 --target_dir_name $data_name --grid_size $grid_size
     # Get heatmap
     python3 analysis/heatmap.py --result_dir data/"$data_name" --offset_range $OFFSET_RANGE --angle_range $ANGLE_RANGE
 done

@@ -173,8 +173,8 @@ def generate_dataset_for_verify(viewer, offset_range, angle_range, offset_grid_n
 def gen_train_valid_data(viewer):
     # Generate training and validation dataset
     offset_range = [-50, 50]
-    angle_range = [-55, 55]
-    training_size = 100000
+    angle_range = [-70, 70]
+    training_size = 130000
     validation_size = 1000
     training_set = generate_dataset(viewer, training_size, offset_range, angle_range)
     validation_set = generate_dataset(viewer, validation_size, offset_range, angle_range)
@@ -183,8 +183,8 @@ def gen_train_valid_data(viewer):
     if not os.path.exists(data_dir):
         print("Creating {}".format(data_dir))
         os.makedirs(data_dir)
-    sio.savemat(os.path.join(data_dir, 'train_big_100000.mat'), training_set)
-    sio.savemat(os.path.join(data_dir, 'valid_big_1000.mat'), validation_set)
+    sio.savemat(os.path.join(data_dir, 'train_bigger_130000.mat'), training_set)
+    sio.savemat(os.path.join(data_dir, 'valid_bigger_1000.mat'), validation_set)
 
 def gen_test_data_for_verify(viewer, range, grid_size):
     # Generate a test set for verify
@@ -426,8 +426,10 @@ def main():
         print("Generation mode not supported.")
 
 
+    #viewer = get_viewer()
     #gen_train_valid_data(viewer)
 
+    #viewer = get_viewer()
     #gen_example_picture(viewer)
 
     #gen_example_picture_with_range(viewer)
