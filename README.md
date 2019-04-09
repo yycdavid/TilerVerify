@@ -28,15 +28,12 @@ In a reasonable setting and a reasonable input space, our method can give a boun
 range.  
 
 
-- Heatmap for error bound and error estimate for both offset and angle. (DONE)
-- Generate dataset and evaluate for error estimate (DONE)
-- Compute statistics on global error bound and estimate as a value and as a percentage over the measurement range
-- Plot this global error bound percentage and global error estimate percentage varying with grid size.
-- Plot the time for verify against grid size.
+- Cumulative histogram plot
+- Difference between upper and lower bound
+- 0.05 run
+- Write
+- add pixel-wise noise
 
-(4.1-7)
-- Run experiments, plot results
-- Progressive tiling/adaptive grid size selection
 
 (4.7-21)
 - Write up

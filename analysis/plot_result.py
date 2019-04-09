@@ -23,8 +23,48 @@ def plot_error_ratio_against_grid_size():
     plt.title('Solve time')
     plt.show()
 
+def plot_global_bound_against_grid_size():
+    grid_sizes = [0.1, 0.2, 0.4, 0.8]
+    global_bounds = [7.127, 12.034, 22.011, 37.757]
+    global_estimate = 4.077
+    plt.figure()
+    plt.plot(grid_sizes, global_bounds, marker='s', label='bound')
+    plt.plot(grid_sizes, [global_estimate for i in global_bounds], marker='s', label='estimate')
+    plt.legend(loc='upper left')
+
+    plt.xlabel('grid size')
+    plt.ylabel('Global max error')
+    plt.title('Global error bound for angle measurement against grid size')
+    plot_file_path = 'angle_bound_grid_size.png'
+    plt.savefig(plot_file_path)
+
+def plot_trusted_region_against_grid_size():
+    grid_sizes = [0.1, 0.2, 0.4, 0.8]
+    trusted_percentages = [99.87, 99.08, 90.83, 24.47]
+    plt.figure()
+    plt.plot(grid_sizes, trusted_percentages, marker='s')
+
+    plt.xlabel('grid size')
+    plt.ylabel('Percentage of trusted region')
+    plt.title('Percentage of trusted region (5.0) for offset measurement against grid size')
+    plot_file_path = 'offset_trusted_grid_size.png'
+    plt.savefig(plot_file_path)
+
+def plot_time_against_grid_size():
+    grid_sizes = [0.1, 0.2, 0.4, 0.8]
+    times = [52607, 32935, 47841, 96731]
+    plt.figure()
+    plt.plot(grid_sizes, times, marker='s')
+
+    plt.xlabel('grid size')
+    plt.ylabel('Time to run verification')
+    plt.title('Time for verification against grid size')
+    plot_file_path = 'time_grid_size.png'
+    plt.savefig(plot_file_path)
+
+
 def main():
-    plot_error_ratio_against_grid_size()
+    plot_time_against_grid_size()
 
 if __name__ == '__main__':
     try:

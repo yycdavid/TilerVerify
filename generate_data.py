@@ -401,7 +401,7 @@ def gen_data_for_estimate(offset_rng, angle_rng, grid_size, target_dir_name):
     angle_range = [-angle_rng, angle_rng]
     offset_grid_num = int(2*offset_rng/grid_size)
     angle_grid_num = int(2*angle_rng/grid_size)
-    num_points_per_side = min(math.ceil(grid_size/0.05),10)
+    num_points_per_side = math.ceil(grid_size/0.05)
     viewer = get_viewer()
     dataset = generate_dataset_for_error_est_parallel(viewer, offset_range, angle_range, offset_grid_num, angle_grid_num, num_points_per_side)
 
