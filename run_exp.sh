@@ -48,7 +48,7 @@ do
     #python3 trainer/error_estimate.py --exp_name $exp_name --target_dir_name $data_name --grid_size $grid_size
     # Get heatmap
     python3 analysis/heatmap.py --result_dir data/"$data_name" --offset_range $OFFSET_RANGE --angle_range $ANGLE_RANGE
-    #python3 analysis/statistics.py --result_dir data/"$data_name"
+    python3 analysis/statistics.py --result_dir data/"$data_name"
 done
 
 

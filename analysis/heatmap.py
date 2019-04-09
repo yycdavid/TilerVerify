@@ -84,11 +84,15 @@ def main():
     plot_heat_map(offset_error_bound_matrix, 'offset', 'bound', args.offset_range, args.angle_range, plots_dir)
     plot_heat_map(angle_error_bound_matrix, 'angle', 'bound', args.offset_range, args.angle_range, plots_dir)
 
-    # Obtain capped error matrices
-    max_error = 5
-    capped_offset_bound, capped_offset_estimate = cap_matrix(offset_error_bound_matrix, offset_error_est_matrix, max_error)
-    plot_heat_map(capped_offset_bound, 'offset', 'bound', args.offset_range, args.angle_range, plots_dir, capped=True)
-    plot_heat_map(capped_offset_estimate, 'offset', 'estimate', args.offset_range, args.angle_range, plots_dir, capped=True)
+    # Plot error gap maps
+    plot_heat_map(offset_error_bound_matrix - offset_error_est_matrix, 'offset', 'gap', args.offset_range, args.angle_range, plots_dir)
+    plot_heat_map(angle_error_bound_matrix - angle_error_est_matrix, 'angle', 'gap', args.offset_range, args.angle_range, plots_dir)
+
+    ## Obtain capped error matrices
+    #max_error = 5
+    #capped_offset_bound, capped_offset_estimate = cap_matrix(offset_error_bound_matrix, offset_error_est_matrix, max_error)
+    #plot_heat_map(capped_offset_bound, 'offset', 'bound', args.offset_range, args.angle_range, plots_dir, capped=True)
+    #plot_heat_map(capped_offset_estimate, 'offset', 'estimate', args.offset_range, args.angle_range, plots_dir, capped=True)
 
 
 if __name__ == '__main__':

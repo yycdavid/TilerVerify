@@ -25,11 +25,12 @@ How good the error bound is: 1) how close it is to the true error 2) is it in ph
 Can you make the error bound tighter in this framework: grid size against error
 
 In a reasonable setting and a reasonable input space, our method can give a bound of 5 percent of the input
-range.  
+range.
 
 
-- Cumulative histogram plot
-- Difference between upper and lower bound
+- Cumulative histogram plot (DONE)
+- Difference between upper and lower bound (DONE)
+- Add 95% and 99% vertical lines to the cumulative plot (DONE)
 - 0.05 run
 - Write
 - add pixel-wise noise
