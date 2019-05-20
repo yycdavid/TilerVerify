@@ -31,7 +31,7 @@ range.
 - Cumulative histogram plot (DONE)
 - Difference between upper and lower bound (DONE)
 - Add 95% and 99% vertical lines to the cumulative plot (DONE)
-- 0.05 run
+- 0.05 run (GOING)
 - Write
 - add pixel-wise noise
 

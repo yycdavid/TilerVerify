@@ -29,12 +29,12 @@ OFFSET_RANGE=40
 ANGLE_RANGE=60
 num_threads=20
 exp_name=big_130000
-for grid_size in 0.1 0.2 0.4 0.8
+for grid_size in 0.1
 do
     export JULIA_NUM_THREADS=$num_threads
     # Generate dataset for estimate and bound
-    #python3 parallel_verify.py --offset_range $OFFSET_RANGE --angle_range $ANGLE_RANGE --grid_size $grid_size --num_threads #$num_threads
-    ## Compute bound by verify
+    #python3 parallel_verify.py --offset_range $OFFSET_RANGE --angle_range $ANGLE_RANGE --grid_size $grid_size --num_threads $num_threads
+    # Compute bound by verify
     data_name=verify_offset_"$OFFSET_RANGE"_angle_"$ANGLE_RANGE"_grid_"$grid_size"_thread_"$num_threads"
     #for thread_number in $(seq 0 $(expr $num_threads - 1))
     #do
@@ -44,11 +44,11 @@ do
     #wait
     #/raid/yicheny/software/julia-9d11f62bcb/bin/julia thread_collect.jl $data_name $num_threads
     ## Compute estimate
-    #python3 generate_data.py --mode estimate --offset_range $OFFSET_RANGE --angle_range $ANGLE_RANGE --grid_size $grid_size --#target_dir_name $data_name
+    #python3 generate_data.py --mode estimate --offset_range $OFFSET_RANGE --angle_range $ANGLE_RANGE --grid_size $grid_size --target_dir_name $data_name
     #python3 trainer/error_estimate.py --exp_name $exp_name --target_dir_name $data_name --grid_size $grid_size
     # Get heatmap
     python3 analysis/heatmap.py --result_dir data/"$data_name" --offset_range $OFFSET_RANGE --angle_range $ANGLE_RANGE
-    python3 analysis/statistics.py --result_dir data/"$data_name"
+    #python3 analysis/statistics.py --result_dir data/"$data_name"
 done
 
 

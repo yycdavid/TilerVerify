@@ -28,17 +28,20 @@ def get_stats_about_masked_region(bound_matrix, est_matrix, cap_value):
     mask_inside = flatten_bound > cap_value
     mask_outside = np.logical_not(mask_inside)
     percent_trusted = np.count_nonzero(mask_outside)/len(flatten_bound)
-    # 2) Max error in estimate outside the mask, return
-    max_est_outside = np.max(flatten_est[mask_outside])
-    avg_est_outside = np.mean(flatten_est[mask_outside])
-    max_bound_outside = np.max(flatten_bound[mask_outside])
-    # 3) Average error in estimate inside the mask, return
-    max_est_inside = np.max(flatten_est[mask_inside])
-    avg_est_inside = np.mean(flatten_est[mask_inside])
-    # 4) Percentage inside the mask that is bigger than max estimate error outside mask, return
-    percent_bad_inside = np.count_nonzero(flatten_est[mask_inside] > max_est_outside)/len(flatten_est[mask_inside])
-    percent_good_inside = np.count_nonzero(flatten_est[mask_inside] < avg_est_outside)/len(flatten_est[mask_inside])
-    return percent_trusted, max_est_outside, avg_est_outside, max_est_inside, avg_est_inside, percent_bad_inside, percent_good_inside, max_bound_outside
+    if percent_trusted == 0:
+        return percent_trusted, 0, 0, 0, 0, 0, 0, 0
+    else:
+        # 2) Max error in estimate outside the mask, return
+        max_est_outside = np.max(flatten_est[mask_outside])
+        avg_est_outside = np.mean(flatten_est[mask_outside])
+        max_bound_outside = np.max(flatten_bound[mask_outside])
+        # 3) Average error in estimate inside the mask, return
+        max_est_inside = np.max(flatten_est[mask_inside])
+        avg_est_inside = np.mean(flatten_est[mask_inside])
+        # 4) Percentage inside the mask that is bigger than max estimate error outside mask, return
+        percent_bad_inside = np.count_nonzero(flatten_est[mask_inside] > max_est_outside)/len(flatten_est[mask_inside])
+        percent_good_inside = np.count_nonzero(flatten_est[mask_inside] < avg_est_outside)/len(flatten_est[mask_inside])
+        return percent_trusted, max_est_outside, avg_est_outside, max_est_inside, avg_est_inside, percent_bad_inside, percent_good_inside, max_bound_outside
 
 def read_bound_est_result(result_dir):
     # Get estimate results
@@ -68,8 +71,12 @@ def compute_and_store_stats(result_dir, offset_error_est_matrix, angle_error_est
         print("Creating {}".format(stats_dir))
         os.makedirs(stats_dir)
 
-    cap_value = 5
-    percent_trusted, max_est_outside, avg_est_outside, max_est_inside, avg_est_inside, percent_bad_inside, percent_good_inside, max_bound_outside = get_stats_about_masked_region(offset_error_bound_matrix, offset_error_est_matrix, cap_value)
+    cap_percentage = 0.03
+    cap_value_offset = cap_percentage * 80
+    cap_value_angle = cap_percentage * 120
+    percent_trusted_offset, max_est_outside, avg_est_outside, max_est_inside, avg_est_inside, percent_bad_inside, percent_good_inside, max_bound_outside = get_stats_about_masked_region(offset_error_bound_matrix, offset_error_est_matrix, cap_value_offset)
+
+    percent_trusted_angle, _, _, _, _, _, _, _ = get_stats_about_masked_region(angle_error_bound_matrix, angle_error_est_matrix, cap_value_angle)
 
     angle_global_bound, angle_global_estimate = get_global_max(angle_error_bound_matrix, angle_error_est_matrix)
     offset_global_bound, offset_global_estimate = get_global_max(offset_error_bound_matrix, offset_error_est_matrix)
@@ -84,7 +91,8 @@ def compute_and_store_stats(result_dir, offset_error_est_matrix, angle_error_est
         f.write('Global estimate for offset is {} \n'.format(offset_global_estimate))
         f.write('\n')
         f.write('Offset mask results: \n')
-        f.write('Percentage of trusted region (outside mask) is {} \n'.format(percent_trusted*100))
+        f.write('Percentage of trusted region for offset (outside mask) is {} \n'.format(percent_trusted_offset*100))
+        f.write('Percentage of trusted region for angle (outside mask) is {} \n'.format(percent_trusted_angle*100))
         f.write('Max estimated error outside the mask is {} \n'.format(max_est_outside))
         f.write('Average estimated error outside the mask is {} \n'.format(avg_est_outside))
         f.write('Max estimated error inside the mask is {} \n'.format(max_est_inside))
@@ -110,12 +118,16 @@ def plot_cumulative_histogram(setting, data_matrix, save_dir):
     percentile_99 = np.percentile(flattened, 99)
     plt.figure()
     plt.plot(cutoffs, percentages)
-    plt.axvline(x=percentile_95)
-    plt.axvline(x=percentile_99)
+    plt.axvline(x=percentile_95, color='r', label="95 percentile: {:.2f}".format(percentile_95))
+    plt.axvline(x=percentile_99, color='m', label="99 percentile: {:.2f}".format(percentile_99))
+    plt.legend(loc='center right')
 
     plt.xlabel('Threshold value')
-    plt.ylabel('Percentage of input space')
-    plt.title('Percentage of input space with error below threshold value')
+    plt.ylabel('Percentage of state space')
+    if setting == 'offset_gap' or setting == 'angle_gap':
+        plt.title('Percentage of state space with error gap below threshold value')
+    else:
+        plt.title('Percentage of state space with error bound below threshold value')
     plot_file_path = os.path.join(save_dir, setting + '_cumulative.png')
     plt.savefig(plot_file_path)
 
