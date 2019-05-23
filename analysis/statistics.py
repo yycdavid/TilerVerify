@@ -118,18 +118,25 @@ def plot_cumulative_histogram(setting, data_matrix, save_dir):
     percentile_99 = np.percentile(flattened, 99)
     plt.figure()
     plt.plot(cutoffs, percentages)
-    plt.axvline(x=percentile_95, color='r', label="95 percentile: {:.2f}".format(percentile_95))
-    plt.axvline(x=percentile_99, color='m', label="99 percentile: {:.2f}".format(percentile_99))
-    plt.legend(loc='center right')
+    plt.axvline(x=percentile_95, color='r', label="95%: {:.2f}".format(percentile_95))
+    plt.axvline(x=percentile_99, color='m', label="99%: {:.2f}".format(percentile_99))
+    plt.legend(loc='lower right')
 
-    plt.xlabel('Threshold value')
-    plt.ylabel('Percentage of state space')
-    if setting == 'offset_gap' or setting == 'angle_gap':
-        plt.title('Percentage of state space with error gap below threshold value')
-    else:
-        plt.title('Percentage of state space with error bound below threshold value')
+    if setting.split('_')[0] == 'offset':
+        plt.xlabel('Threshold (length unit)')
+    elif setting.split('_')[0] == 'angle':
+        plt.xlabel('Threshold (degree)')
+    plt.ylabel('% state space')
+    if setting == 'offset_upper':
+        plt.title('offset error bound')
+    elif setting == 'offset_gap':
+        plt.title('offset error gap')
+    elif setting == 'angle_upper':
+        plt.title('angle error bound')
+    elif setting == 'angle_gap':
+        plt.title('angle error gap')
     plot_file_path = os.path.join(save_dir, setting + '_cumulative.png')
-    plt.savefig(plot_file_path)
+    plt.savefig(plot_file_path, bbox_inches='tight')
 
 
 def compute_plot_cumulative_histogram(result_dir, offset_error_est_matrix, angle_error_est_matrix, offset_error_bound_matrix, angle_error_bound_matrix):
@@ -140,6 +147,9 @@ def compute_plot_cumulative_histogram(result_dir, offset_error_est_matrix, angle
     if not os.path.exists(stats_dir):
         print("Creating {}".format(stats_dir))
         os.makedirs(stats_dir)
+
+    plt.rcParams.update({'font.size': 18})
+    plt.rcParams.update({'figure.autolayout': True})
 
     entries = {'offset_lower': offset_error_est_matrix,
                 'offset_upper': offset_error_bound_matrix,

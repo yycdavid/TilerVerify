@@ -23,8 +23,8 @@ def plot_heat_map(error_matrix, target_name, type, offset_range, angle_range, re
 
     plt.figure()
     #sns.set()
-    ytick_space = offset_range*2//10
-    xtick_space = angle_range*2//10
+    ytick_space = offset_range*2//5
+    xtick_space = angle_range*2//5
     offset_range = [-offset_range, offset_range]
     angle_range = [-angle_range, angle_range]
     yticks = np.arange(offset_range[0], offset_range[1]+1, ytick_space)
@@ -50,12 +50,12 @@ def plot_heat_map(error_matrix, target_name, type, offset_range, angle_range, re
     ax.set_xticks(x_tick_position)
     ax.set_yticks(y_tick_position)
     ax.set(xlabel='Angle', ylabel='Offset')
-    ax.set(title='Error ' + type + ' map for '+target_name)
+    ax.set(title=target_name + ' error ' + type)
     if not capped:
         plot_file_path = os.path.join(result_dir, target_name+"_"+ type + ".png")
     else:
         plot_file_path = os.path.join(result_dir, target_name+"_"+ type + "_capped" + ".png")
-    plt.savefig(plot_file_path)
+    plt.savefig(plot_file_path, bbox_inches='tight')
 
 def cap_matrix(bound_matrix, est_matrix, max_value):
     flatten_bound = np.reshape(bound_matrix, -1)
@@ -90,6 +90,8 @@ def main():
         print("Creating {}".format(plots_dir))
         os.makedirs(plots_dir)
     # Plot heatmap
+    plt.rcParams.update({'font.size': 20})
+
     plot_heat_map(offset_error_est_matrix, 'offset', 'estimate', args.offset_range, args.angle_range, plots_dir)
     plot_heat_map(angle_error_est_matrix, 'angle', 'estimate', args.offset_range, args.angle_range, plots_dir)
 
