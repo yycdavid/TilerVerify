@@ -52,9 +52,9 @@ def plot_heat_map(error_matrix, target_name, type, offset_range, angle_range, re
     ax.set(xlabel='Angle', ylabel='Offset')
     ax.set(title=target_name + ' error ' + type)
     if not capped:
-        plot_file_path = os.path.join(result_dir, target_name+"_"+ type + ".png")
+        plot_file_path = os.path.join(result_dir, target_name+"_"+ type + ".pdf")
     else:
-        plot_file_path = os.path.join(result_dir, target_name+"_"+ type + "_capped" + ".png")
+        plot_file_path = os.path.join(result_dir, target_name+"_"+ type + "_capped" + ".pdf")
     plt.savefig(plot_file_path, bbox_inches='tight')
 
 def cap_matrix(bound_matrix, est_matrix, max_value):

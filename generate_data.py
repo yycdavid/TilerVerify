@@ -215,13 +215,13 @@ def gen_test_data_for_error_est(viewer, range, grid_size):
 
 def gen_example_picture(viewer):
     # Generate a picture
-    offset = -40.0
-    angle = 45.0
+    offset = 10.0
+    angle = 15.0
     image_taken = viewer.take_picture(offset, angle)
 
     img = Image.fromarray(image_taken)
     img = img.convert("L")
-    img.save('32_offset_{}_angle_{}.jpg'.format(offset, angle))
+    img.save('32_offset_{}_angle_{}.pdf'.format(offset, angle))
 
 def gen_example_picture_with_range(viewer):
     # Generate a picture with range
@@ -412,25 +412,25 @@ def gen_data_for_estimate(offset_rng, angle_rng, grid_size, target_dir_name):
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Dataset generation')
-    parser.add_argument('--mode', type=str, help='Mode of generation, currently only support estimate')
-    parser.add_argument('--offset_range', type=int, help='Range for offset')
-    parser.add_argument('--angle_range', type=int, help='Range for angle')
-    parser.add_argument('--grid_size', type=float, help='Grid size for calculating error')
-    parser.add_argument('--target_dir_name', type=str, help='Directory name to save the generated data')
-    args = parser.parse_args()
-
-    if args.mode == 'estimate':
-        gen_data_for_estimate(args.offset_range, args.angle_range, args.grid_size, args.target_dir_name)
-    else:
-        print("Generation mode not supported.")
+    #parser = argparse.ArgumentParser(description='Dataset generation')
+    #parser.add_argument('--mode', type=str, help='Mode of generation, currently only support estimate')
+    #parser.add_argument('--offset_range', type=int, help='Range for offset')
+    #parser.add_argument('--angle_range', type=int, help='Range for angle')
+    #parser.add_argument('--grid_size', type=float, help='Grid size for calculating error')
+    #parser.add_argument('--target_dir_name', type=str, help='Directory name to save the generated data')
+    #args = parser.parse_args()
+#
+    #if args.mode == 'estimate':
+    #    gen_data_for_estimate(args.offset_range, args.angle_range, args.grid_size, args.target_dir_name)
+    #else:
+    #    print("Generation mode not supported.")
 
 
     #viewer = get_viewer()
     #gen_train_valid_data(viewer)
 
-    #viewer = get_viewer()
-    #gen_example_picture(viewer)
+    viewer = get_viewer()
+    gen_example_picture(viewer)
 
     #gen_example_picture_with_range(viewer)
 

@@ -35,7 +35,7 @@ def plot_global_bound_against_grid_size():
     plt.xlabel('grid size')
     plt.ylabel('Global max error')
     plt.title('Global error bound for angle measurement against grid size')
-    plot_file_path = 'angle_bound_grid_size.png'
+    plot_file_path = 'angle_bound_grid_size.pdf'
     plt.savefig(plot_file_path)
 
 def plot_99_against_grid_size():
@@ -66,7 +66,7 @@ def plot_99_against_grid_size():
     #fig.tight_layout()  # otherwise the right y-label is slightly clipped
 
     plt.title('99 percentiles of bounds and gaps\n against grid size')
-    plot_file_path = '99_percentile_grid_size.png'
+    plot_file_path = '99_percentile_grid_size.pdf'
     plt.savefig(plot_file_path)
 
 def plot_trusted_region_against_grid_size():
@@ -81,7 +81,7 @@ def plot_trusted_region_against_grid_size():
     plt.xlabel('grid size')
     plt.ylabel('Percentage of trusted region')
     plt.title('Percentage of trusted region\n against grid size')
-    plot_file_path = 'trusted_grid_size.png'
+    plot_file_path = 'trusted_grid_size.pdf'
     plt.savefig(plot_file_path)
 
 def plot_time_against_grid_size():
@@ -94,13 +94,15 @@ def plot_time_against_grid_size():
     plt.ylabel('Time for solving (hour)')
     plt.title('Time for solving against grid size')
 
-    plot_file_path = 'time_grid_size.png'
+    plot_file_path = 'time_grid_size.pdf'
     plt.savefig(plot_file_path)
 
 
 def main():
     plt.rcParams.update({'font.size': 16})
     plt.rcParams.update({'figure.autolayout': True})
+    plot_99_against_grid_size()
+    plot_trusted_region_against_grid_size()
     plot_time_against_grid_size()
 
 if __name__ == '__main__':

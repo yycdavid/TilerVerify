@@ -135,7 +135,7 @@ def plot_cumulative_histogram(setting, data_matrix, save_dir):
         plt.title('angle error bound')
     elif setting == 'angle_gap':
         plt.title('angle error gap')
-    plot_file_path = os.path.join(save_dir, setting + '_cumulative.png')
+    plot_file_path = os.path.join(save_dir, setting + '_cumulative.pdf')
     plt.savefig(plot_file_path, bbox_inches='tight')
 
 
