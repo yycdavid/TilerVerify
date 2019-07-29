@@ -2,18 +2,18 @@ OFFSET_RANGE=40
 ANGLE_RANGE=60
 noise_mode=uniform
 noise_scale=0.1
-python3 generate_data.py --mode train --offset_range $OFFSET_RANGE --angle_range $ANGLE_RANGE --noise $noise_mode --noise_scale $noise_scale --target_dir_name train_"$noise_mode"_"$noise_scale"
+#python3 generate_data.py --mode train --offset_range $OFFSET_RANGE --angle_range $ANGLE_RANGE --noise $noise_mode --noise_scale $noise_scale --target_dir_name train_"$noise_mode"_"$noise_scale"
 
-#TRAIN_DATA=train_bigger_130000.mat
-#VALID_DATA=valid_bigger_1000.mat
-#RESULT_FOLDER=big_130000
-#python3 trainer/train.py --train_data $TRAIN_DATA --val_data $VALID_DATA --result $RESULT_FOLDER
+TRAIN_DATA=train_bigger_130000.mat
+VALID_DATA=valid_bigger_1000.mat
+RESULT_FOLDER="$noise_mode"_"$noise_scale"
+#CUDA_VISIBLE_DEVICES=0 python3 trainer/train.py --dataset_folder train_"$noise_mode"_"$noise_scale" --train_data $TRAIN_DATA --val_data $VALID_DATA --result $RESULT_FOLDER --cuda
 #python3 trainer/convert_for_milp.py --name $RESULT_FOLDER
 #
 #OFFSET_RANGE=40
 #ANGLE_RANGE=60
-#num_threads=20
-#exp_name=big_130000
+num_threads=20
+exp_name=big_130000
 #for grid_size in 0.1
 #do
 #    export JULIA_NUM_THREADS=$num_threads

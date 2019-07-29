@@ -46,6 +46,7 @@ def test(args, model, device, test_loader):
 def get_args():
     parser = argparse.ArgumentParser(description='Training model for the synthetic road scene')
     # Training settings
+    parser.add_argument('--dataset_folder', type=str, help='Folder of training and validation data')
     parser.add_argument('--train_data', type=str, help='File of training data')
     parser.add_argument('--val_data', type=str, help='File of validation data')
     parser.add_argument('--batch-size', type=int, default=64, metavar='N',
@@ -92,7 +93,7 @@ def main():
     torch.manual_seed(args.seed)
     device = torch.device("cuda" if use_cuda else "cpu")
 
-    data_dir = os.path.join(base_dir, 'data')
+    data_dir = os.path.join(base_dir, 'data', args.dataset_folder)
     train_data, eval_data = load_data(data_dir, args.train_data, args.val_data)
 
     train_dataset = RoadSceneDataset(train_data['images'], train_data['offsets'].squeeze(), train_data['angles'].squeeze())
