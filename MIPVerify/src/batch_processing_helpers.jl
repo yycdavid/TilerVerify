@@ -585,7 +585,6 @@ function batch_find_error_bound_thread(
         thread_number
         )
     num_entries = MIPVerify.num_samples(dataset)
-
     non_optimal_entries = []
     time_spent = @elapsed begin
         for sample_number in 1:num_entries

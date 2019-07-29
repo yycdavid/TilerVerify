@@ -72,13 +72,16 @@ class Viewer:
     Support given a offset and angle, return an image taken
     Support given a offset and angle and range, return an image together with pixel value ranges.
     """
-    def __init__(self, camera_params, scene):
+    def __init__(self, camera_params, scene, noise_mode='none', noise_scale=0.0):
         super(Viewer, self).__init__()
         self.height = camera_params['height']
         self.focal_length = camera_params['focal_length']
         self.pixel_num = camera_params['pixel_num'] # n-by-n image
         self.pixel_size = camera_params['pixel_size'] # edge length for single pixel
         self.scene = scene
+        self.noise_mode = noise_mode
+        self.noise_scale = noise_scale
+        self.n_sigma = 4 # Only for noise_mode==gaussian, where to truncate
         self.angle_to_x_axis = self._compute_angle_to_x_axis()
 
     def take_picture(self, offset, angle):
@@ -96,6 +99,8 @@ class Viewer:
                     # Query intensity value from Scene
                     pixel_matrix[i][j] = self.scene.get_intensity_at_point(intersection_point[0], intersection_point[1]) # i is row index, j is column index
 
+        if self.noise_mode != 'none':
+            pixel_matrix = self._add_noise(pixel_matrix)
         pixel_matrix = self._quantize_image(pixel_matrix)
         return pixel_matrix
 
@@ -136,6 +141,10 @@ class Viewer:
                     (min_val, max_val) = self.scene.get_intensity_range(min(xs_critical), max(xs_critical))
                     lower_bound_matrix[i][j] = min_val
                     upper_bound_matrix[i][j] = max_val
+        if self.noise_mode != 'none':
+            image_matrix = self._add_noise(image_matrix)
+            lower_bound_matrix = self._extend_bound(lower_bound_matrix, 'lower')
+            upper_bound_matrix = self._extend_bound(upper_bound_matrix, 'upper')
         image_matrix = self._quantize_image(image_matrix)
         lower_bound_matrix = self._quantize_image(lower_bound_matrix)
         upper_bound_matrix = self._quantize_image(upper_bound_matrix)
@@ -173,6 +182,30 @@ class Viewer:
         world_coord = world_homo[0:3]/world_homo[3]
         return world_coord
 
+    def _add_noise(self, continuous_image):
+        if self.noise_mode == 'uniform':
+            noise = np.random.rand(*np.shape(continuous_image)) * (2*self.noise_scale) - self.noise_scale # Rescale to [-noise_scale, noise_scale]
+            return np.clip(continuous_image+noise, 0.0, 1.0)
+        elif self.noise_mode == 'gaussian':
+            noise = np.random.randn(*np.shape(continuous_image)) * self.noise_scale # Rescale to zero mean and std noise_scale
+            return np.clip(continuous_image+noise, 0.0, 1.0)
+        else:
+            raise Exception('Noise mode not supported')
+
     def _quantize_image(self, continuous_image):
         # Transform an image in (0,1) to [0,255] discrete
         return np.clip(np.floor(continuous_image*256),0,255)
+
+    def _extend_bound(self, continuous_image, mode):
+        if self.noise_mode == 'uniform':
+            if mode == 'lower':
+                return np.clip(continuous_image - self.noise_scale, 0.0, 1.0)
+            else:
+                return np.clip(continuous_image + self.noise_scale, 0.0, 1.0)
+        elif self.noise_mode == 'gaussian':
+            if mode == 'lower':
+                return np.clip(continuous_image - self.noise_scale * self.n_sigma, 0.0, 1.0)
+            else:
+                return np.clip(continuous_image + self.noise_scale * self.n_sigma, 0.0, 1.0)
+        else:
+            raise Exception('Noise mode not supported')

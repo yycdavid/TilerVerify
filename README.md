@@ -34,3 +34,9 @@ To verify a new network:
 1. Add the model in trainer/model.py, and train it
 2. Add the model in trainer/convert_for_milp.py, and convert the trained model into correct format for MIPVerify
 3. Add the model in MIPVerify/src/utils/import_example_nets.jl
+
+- Generate new training data with bounded noise
+- Train model
+- New bounding box data
+- Verify
+- Analyze

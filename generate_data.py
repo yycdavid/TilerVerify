@@ -170,16 +170,17 @@ def generate_dataset_for_verify(viewer, offset_range, angle_range, offset_grid_n
     dataset['angle_grid_num'] = angle_grid_num
     return dataset
 
-def gen_train_valid_data(viewer):
+def gen_train_valid_data(offset_range, angle_range, noise_mode, noise_scale, target_dir_name):
+    viewer = get_viewer(noise_mode, noise_scale)
     # Generate training and validation dataset
-    offset_range = [-50, 50]
-    angle_range = [-70, 70]
+    offset_range = [-offset_range, offset_range]
+    angle_range = [-angle_range, angle_range]
     training_size = 130000
     validation_size = 1000
     training_set = generate_dataset(viewer, training_size, offset_range, angle_range)
     validation_set = generate_dataset(viewer, validation_size, offset_range, angle_range)
 
-    data_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'data')
+    data_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'data', target_dir_name)
     if not os.path.exists(data_dir):
         print("Creating {}".format(data_dir))
         os.makedirs(data_dir)
@@ -242,9 +243,9 @@ def gen_example_picture_with_range(viewer):
     img_upper.save('test_upper.jpg')
 
 
-def get_viewer():
+def get_viewer(noise_mode='none', noise_scale=0.0):
     scene = image_generator.Scene(scene_params)
-    viewer = image_generator.Viewer(camera_params, scene)
+    viewer = image_generator.Viewer(camera_params, scene, noise_mode, noise_scale)
     return viewer
 
 def partial_dataset(dataset, index_range):
@@ -412,25 +413,28 @@ def gen_data_for_estimate(offset_rng, angle_rng, grid_size, target_dir_name):
 
 
 def main():
-    #parser = argparse.ArgumentParser(description='Dataset generation')
-    #parser.add_argument('--mode', type=str, help='Mode of generation, currently only support estimate')
-    #parser.add_argument('--offset_range', type=int, help='Range for offset')
-    #parser.add_argument('--angle_range', type=int, help='Range for angle')
-    #parser.add_argument('--grid_size', type=float, help='Grid size for calculating error')
-    #parser.add_argument('--target_dir_name', type=str, help='Directory name to save the generated data')
-    #args = parser.parse_args()
-#
-    #if args.mode == 'estimate':
-    #    gen_data_for_estimate(args.offset_range, args.angle_range, args.grid_size, args.target_dir_name)
-    #else:
-    #    print("Generation mode not supported.")
+    parser = argparse.ArgumentParser(description='Dataset generation')
+    parser.add_argument('--mode', type=str, help='Mode of generation, currently support estimate/train')
+    parser.add_argument('--offset_range', type=int, help='Range for offset')
+    parser.add_argument('--angle_range', type=int, help='Range for angle')
+    parser.add_argument('--target_dir_name', type=str, help='Directory name to save the generated data')
+    # For estimate mode
+    parser.add_argument('--grid_size', type=float, default=0.1, help='Grid size for calculating error')
+    # For train mode
+    parser.add_argument('--noise', type=str, default='none', help='Noise mode, can be none/uniform/gaussian')
+    parser.add_argument('--noise_scale', type=float, default=0.05, help='Scale of noise, for uniform it is the max, for gaussian it is one sigma')
+    args = parser.parse_args()
+
+    if args.mode == 'estimate':
+        gen_data_for_estimate(args.offset_range, args.angle_range, args.grid_size, args.target_dir_name)
+    elif args.mode == 'train':
+        gen_train_valid_data(args.offset_range, args.angle_range, args.noise, args.noise_scale, args.target_dir_name)
+    else:
+        print("Generation mode not supported.")
 
 
     #viewer = get_viewer()
-    #gen_train_valid_data(viewer)
-
-    viewer = get_viewer()
-    gen_example_picture(viewer)
+    #gen_example_picture(viewer)
 
     #gen_example_picture_with_range(viewer)
 
