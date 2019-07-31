@@ -15,12 +15,14 @@ def main():
     parser.add_argument('--angle_range', type=int, help='Range for angle, for generating test datasets')
     parser.add_argument('--grid_size', type=float, help='Grid size for calculating error')
     parser.add_argument('--num_threads', type=int, help='Number of threads to run the verifier')
+    parser.add_argument('--noise', type=str, default='none', help='Noise mode, can be none/uniform/gaussian')
+    parser.add_argument('--noise_scale', type=float, default=0.05, help='Scale of noise, for uniform it is the max, for gaussian it is one sigma')
     args = parser.parse_args()
 
     # Generate data for verify as separate files for each thread, in a subdirectory in data
-    generate_data.gen_data_for_verify_parallel(args.offset_range, args.angle_range, args.grid_size, args.num_threads)
+    generate_data.gen_data_for_verify_parallel(args.offset_range, args.angle_range, args.grid_size, args.num_threads, args.noise, args.noise_scale)
 
-    
+
 
 
 if __name__ == '__main__':
