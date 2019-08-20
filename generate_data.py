@@ -126,49 +126,6 @@ def generate_partial_est_dataset(offset_range, angle_range, offset_grid_num, ang
     return sub_dataset
 
 
-def generate_dataset_for_verify(viewer, offset_range, angle_range, offset_grid_num, angle_grid_num):
-    # offset_range and angle_range are list, [low, high]
-    offset_grid_size = (offset_range[1] - offset_range[0])/offset_grid_num
-    angle_grid_size = (angle_range[1] - angle_range[0])/angle_grid_num
-    offset_delta = offset_grid_size / 2
-    angle_delta = angle_grid_size / 2
-    image_lower_bounds = []
-    image_upper_bounds = []
-    offset_lower_bounds = []
-    offset_upper_bounds = []
-    angle_lower_bounds = []
-    angle_upper_bounds = []
-    images = []
-    offsets = []
-    angles = []
-    for i in tqdm(range(offset_grid_num)):
-        offset = offset_range[0] + i * offset_grid_size + offset_delta
-        for j in range(angle_grid_num):
-            angle = angle_range[0] + j * angle_grid_size + angle_delta
-            image, lower_bound_matrix, upper_bound_matrix = viewer.take_picture_with_range(offset, angle, offset_delta, angle_delta)
-            image_lower_bounds.append(np.expand_dims(lower_bound_matrix, axis=0))
-            image_upper_bounds.append(np.expand_dims(upper_bound_matrix, axis=0))
-            images.append(np.expand_dims(image, axis=0))
-            offset_lower_bounds.append(offset - offset_delta)
-            offset_upper_bounds.append(offset + offset_delta)
-            offsets.append(offset)
-            angle_lower_bounds.append(angle - angle_delta)
-            angle_upper_bounds.append(angle + angle_delta)
-            angles.append(angle)
-
-    dataset = {}
-    dataset['image_lower_bounds'] = np.concatenate(image_lower_bounds, axis=0) # (N, H, W)
-    dataset['image_upper_bounds'] = np.concatenate(image_upper_bounds, axis=0) # (N, H, W)
-    dataset['offset_lower_bounds'] = np.array(offset_lower_bounds) # (N,)
-    dataset['offset_upper_bounds'] = np.array(offset_upper_bounds) # (N,)
-    dataset['angle_lower_bounds'] = np.array(angle_lower_bounds) # (N,)
-    dataset['angle_upper_bounds'] = np.array(angle_upper_bounds) # (N,)
-    dataset['images'] = np.concatenate(images, axis=0) # (N, H, W)
-    dataset['offsets'] = np.array(offsets) # (N,)
-    dataset['angles'] = np.array(angles) # (N,)
-    dataset['offset_grid_num'] = offset_grid_num
-    dataset['angle_grid_num'] = angle_grid_num
-    return dataset
 
 def gen_train_valid_data(offset_range, angle_range, noise_mode, noise_scale, target_dir_name):
     viewer = get_viewer(noise_mode, noise_scale)
@@ -186,19 +143,6 @@ def gen_train_valid_data(offset_range, angle_range, noise_mode, noise_scale, tar
         os.makedirs(data_dir)
     sio.savemat(os.path.join(data_dir, 'train_bigger_130000.mat'), training_set)
     sio.savemat(os.path.join(data_dir, 'valid_bigger_1000.mat'), validation_set)
-
-def gen_test_data_for_verify(viewer, range, grid_size):
-    # Generate a test set for verify
-    offset_range = [-range, range]
-    angle_range = [-range, range]
-    offset_grid_num = int(2*range/grid_size)
-    angle_grid_num = int(2*range/grid_size)
-    dataset = generate_dataset_for_verify(viewer, offset_range, angle_range, offset_grid_num, angle_grid_num)
-    data_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'data')
-    if not os.path.exists(data_dir):
-        print("Creating {}".format(data_dir))
-        os.makedirs(data_dir)
-    sio.savemat(os.path.join(data_dir, 'test_verify_{}_{}.mat'.format(range, grid_size)), dataset)
 
 def gen_test_data_for_error_est(viewer, range, grid_size):
     # Generate a test set for error estimation

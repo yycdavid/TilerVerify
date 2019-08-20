@@ -35,8 +35,12 @@ To verify a new network:
 2. Add the model in trainer/convert_for_milp.py, and convert the trained model into correct format for MIPVerify
 3. Add the model in MIPVerify/src/utils/import_example_nets.jl
 
-- Generate new training data with bounded noise
-- Train model
-- New bounding box data
-- Verify
-- Analyze
+
+Add functionality:
+- Spec: Given a new image, decide whether it's within the bounding boxes or not.
+- Test: 1) Legal images, 100% accept;
+        2) Images with added elements (e.g. lines), able to reject
+        3) Adversarially perturbed images, able to reject
+- Engineering plan:
+    Have a input_detector folder, deal with this
+    Implement until a point when it can be run within a reasonable time 
