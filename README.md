@@ -43,4 +43,7 @@ Add functionality:
         3) Adversarially perturbed images, able to reject
 - Engineering plan:
     Have a input_detector folder, deal with this
-    Implement until a point when it can be run within a reasonable time 
+    Implement until a point when it can be run within a reasonable time
+
+
+- naive implementation: 1.47s/input
