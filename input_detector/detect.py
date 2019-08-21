@@ -7,6 +7,9 @@ import scipy.io as sio
 import argparse
 import math
 import time
+import torch
+import torch.nn as nn
+from collections import OrderedDict
 
 import sys
 base_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
@@ -14,6 +17,12 @@ if not base_dir in sys.path:
     sys.path.append(base_dir)
 from generate_data import get_viewer
 
+from trainer.dataset import RoadSceneDataset
+
+
+class Flatten(nn.Module):
+    def forward(self, x):
+        return x.view(x.size(0), -1)
 
 def gen_bounding_boxes(viewer, offset_rng, angle_rng, grid_size):
     # Generate a test set for verify
@@ -107,7 +116,91 @@ def get_input_image():
     angle = np.random.uniform(low=-60.0, high=60.0)
     print("Example image offset: {}, angle: {}".format(offset, angle))
     example_image = viewer.take_picture(offset, angle)
-    return example_image.flatten(), offset, angle
+    return example_image, offset, angle
+
+
+class InputDetector(object):
+    """docstring for InputDetector."""
+
+    def __init__(self, lower_bounds, upper_bounds, offset_lower_bounds, angle_lower_bounds, offset_grid_size, angle_grid_size, offset_error_bound, angle_error_bound):
+        super(InputDetector, self).__init__()
+        self.lower_bounds = lower_bounds
+        self.upper_bounds = upper_bounds
+        self.offset_lower_bounds = offset_lower_bounds
+        self.angle_lower_bounds = angle_lower_bounds
+        self.offset_grid_size = offset_grid_size
+        self.angle_grid_size = angle_grid_size
+        self.offset_error_bound = offset_error_bound
+        self.angle_error_bound = angle_error_bound
+
+    def detect_input(self, input_image):
+        return np.any(np.logical_and(np.all(self.lower_bounds <= input_image, axis=1), np.all(input_image <= self.upper_bounds, axis=1)))
+
+    def detect_input_with_prediction(self, input_image, offset_pred, angle_pred):
+        indices = (self.offset_lower_bounds >= offset_pred - self.offset_error_bound - self.offset_grid_size) & \
+            (self.offset_lower_bounds <= offset_pred + self.offset_error_bound) & \
+            (self.angle_lower_bounds >= angle_pred - self.angle_error_bound - self.angle_grid_size) & \
+            (self.angle_lower_bounds <= angle_pred + self.angle_error_bound)
+
+        return np.any(np.logical_and(np.all(self.lower_bounds[indices] <= input_image, axis=1), np.all(input_image <= self.upper_bounds[indices], axis=1)))
+
+
+def prepare_test_dataset(num_images):
+    # Get an input image
+    print('Get example images...')
+    example_images = []
+    offsets = []
+    angles = []
+    for i in range(num_images):
+        example_image, offset, angle = get_input_image()
+        example_images.append(np.expand_dims(example_image, axis=0))
+        offsets.append(offset)
+        angles.append(angle)
+
+    dataset = {}
+    dataset['images'] = np.concatenate(example_images, axis=0) # (N, H, W)
+    dataset['offsets'] = np.array(offsets) # (N,)
+    dataset['angles'] = np.array(angles) # (N,)
+    test_dataset = RoadSceneDataset(dataset['images'], np.squeeze(dataset['offsets']), np.squeeze(dataset['angles']))
+
+    example_images = [np.reshape(example_image, (1, -1)) for example_image in example_images]
+    return test_dataset, example_images
+
+
+def load_trained_nn():
+    base_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+    exp_dir = os.path.join(base_dir, 'trained_models', 'big_130000')
+    model_file_path = os.path.join(exp_dir, 'best_model.pt')
+    assert os.path.isfile(model_file_path), "The experiment required has not been run or does not have the model trained."
+
+    # cnn_small_torch corresponds to CNN_small in model.py
+    cnn_small_torch = nn.Sequential(OrderedDict([
+        ('conv1', nn.Conv2d(1, 16, 4, stride=2, padding=1)),
+        ('relu1', nn.ReLU()),
+        ('conv2', nn.Conv2d(16, 32, 4, stride=2, padding=1)),
+        ('relu2', nn.ReLU()),
+        ('flatten', Flatten()),
+        ('fc1', nn.Linear(8*8*32, 100)),
+        ('relu3', nn.ReLU()),
+        ('fc2', nn.Linear(100, 2))
+    ]))
+    cnn_small_torch.load_state_dict(torch.load(model_file_path, map_location="cpu"))
+    return cnn_small_torch
+
+
+def get_predictions(model, test_loader, device):
+    model.eval()
+    offset_preds = []
+    angle_preds = []
+    with torch.no_grad():
+        for images, offsets, angles in tqdm(test_loader):
+            images = images.to(device)
+            output = model(images).numpy()
+            offset_preds.append(output[:,0])
+            angle_preds.append(output[:,1])
+    offset_preds = np.concatenate(offset_preds)
+    angle_preds = np.concatenate(angle_preds)
+    return offset_preds, angle_preds
 
 
 def main():
@@ -115,29 +208,50 @@ def main():
     parser.add_argument('--file_name', type=str, help='File path to bounding boxes')
     parser.add_argument('--mode', type=str, help='can be naive')
     args = parser.parse_args()
+
     # Load bounding boxes
     if args.mode == 'naive':
         lower_bounds, upper_bounds, offset_lower_bounds, angle_lower_bounds = get_bounding_boxes(args.file_name, 'naive')
-    # Get an input image
-    print('Get example images...')
-    example_images = []
-    num_images = 20
-    for i in range(num_images):
-        example_image, _, _ = get_input_image()
-        example_images.append(np.expand_dims(example_image, axis=0))
 
-    # Decide if it's in any of the bounding box
+    offset_grid_size = angle_grid_size = 0.2
+    offset_error_bound = 11.058546699918972
+    angle_error_bound = 5.269179741339784
+
+    input_detector = InputDetector(lower_bounds, upper_bounds, offset_lower_bounds, angle_lower_bounds, offset_grid_size, angle_grid_size, offset_error_bound, angle_error_bound)
+
+    # Prepare dataset for test
+    num_images = 20
+    test_dataset, example_images = prepare_test_dataset(num_images)
+    test_loader = torch.utils.data.DataLoader(
+        test_dataset,
+        batch_size=20, shuffle=False)
+
+    # Get network predictions
+    device = torch.device("cpu")
+    nn_model = load_trained_nn()
+    offset_preds, angle_preds = get_predictions(nn_model, test_loader, device)
+
+    # Decide if it's in any of the bounding box, naive method
     print("Start detecting...")
     start_t = time.time()
     for i in range(num_images):
         example_image = example_images[i]
-        is_legal = np.any(np.logical_and(np.all(lower_bounds <= example_image, axis=1), np.all(example_image <= upper_bounds, axis=1)))
+        is_legal = input_detector.detect_input(example_image)
         print(is_legal)
 
     end_t = time.time()
-    print('Time spent per input: {}'.format((end_t - start_t)/num_images))
+    print('Time spent per input (naive): {}'.format((end_t - start_t)/num_images))
 
+    # Decide if it's in any of the bounding box, guided search
+    print("Start detecting...")
+    start_t = time.time()
+    for i in range(num_images):
+        example_image = example_images[i]
+        is_legal = input_detector.detect_input_with_prediction(example_image, offset_preds[i], angle_preds[i])
+        print(is_legal)
 
+    end_t = time.time()
+    print('Time spent per input (guided): {}'.format((end_t - start_t)/num_images))
 
 
 if __name__ == '__main__':
