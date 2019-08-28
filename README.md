@@ -1,6 +1,6 @@
 # TilerVerify
 
-This is the source code repository for NeurIPS 2019 submission 8354 'Correctness Verification of Neural Networks'.
+This is the source code repository for paper 'Correctness Verification of Neural Networks'. This is still updating with the research, so please contact Yichen Yang (yicheny@mit.edu) if you have issues using it.
 
 ## Dependencies
 The code is tested with Python 3.5.2 and Julia 0.6.4. Run dependency.jl to get required packages in Julia. Our code for solving neural network output range is based on [MIPVerify.jl](https://github.com/vtjeng/MIPVerify.jl) (**Evaluating Robustness of Neural Networks with Mixed Integer Programming**
@@ -45,5 +45,18 @@ Add functionality:
     Have a input_detector folder, deal with this
     Implement until a point when it can be run within a reasonable time
 
+(100 samples, legal)
+- NN inference: 0.0025s/input
+- naive implementation: 1.138s/input
+- guided: 0.069s/input
 
-- naive implementation: 1.47s/input
+(20 samples, noisy)
+- NN inference: 0.0048s/input
+- naive: 0.979s/input
+- guided: 0.090s/input
+
+
+1000 samples
+noisy: 0.0949s/input 1000 False
+legal: 0.0431s/input 1000 True
+different scene: 0.0528s/input, 1000 False

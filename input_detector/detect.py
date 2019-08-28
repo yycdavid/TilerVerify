@@ -112,6 +112,7 @@ def get_bounding_boxes(file_name, mode):
 
 def get_input_image():
     viewer = get_viewer()
+    #viewer = get_viewer(noise_mode='uniform', noise_scale=0.1)
     offset = np.random.uniform(low=-40.0, high=40.0)
     angle = np.random.uniform(low=-60.0, high=60.0)
     print("Example image offset: {}, angle: {}".format(offset, angle))
@@ -220,27 +221,33 @@ def main():
     input_detector = InputDetector(lower_bounds, upper_bounds, offset_lower_bounds, angle_lower_bounds, offset_grid_size, angle_grid_size, offset_error_bound, angle_error_bound)
 
     # Prepare dataset for test
-    num_images = 20
+    num_images = 1000
     test_dataset, example_images = prepare_test_dataset(num_images)
     test_loader = torch.utils.data.DataLoader(
         test_dataset,
-        batch_size=20, shuffle=False)
+        batch_size=1, shuffle=False)
 
     # Get network predictions
     device = torch.device("cpu")
+    torch.set_num_threads(1)
     nn_model = load_trained_nn()
+    print("Start predicting...")
+    start_t = time.time()
     offset_preds, angle_preds = get_predictions(nn_model, test_loader, device)
+    end_t = time.time()
+    print('Time spent per input in inference: {}'.format((end_t - start_t)/num_images))
 
-    # Decide if it's in any of the bounding box, naive method
+    '''# Decide if it's in any of the bounding box, naive method
     print("Start detecting...")
     start_t = time.time()
     for i in range(num_images):
         example_image = example_images[i]
+        #is_legel = np.any(np.logical_and(np.all(lower_bounds <= input_image, axis=1), np.all(input_image <= upper_bounds, axis=1)))
         is_legal = input_detector.detect_input(example_image)
         print(is_legal)
 
     end_t = time.time()
-    print('Time spent per input (naive): {}'.format((end_t - start_t)/num_images))
+    print('Time spent per input (naive): {}'.format((end_t - start_t)/num_images))'''
 
     # Decide if it's in any of the bounding box, guided search
     print("Start detecting...")
