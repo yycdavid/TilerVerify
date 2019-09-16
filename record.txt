@@ -1,0 +1,24 @@
+Input detector:
+
+(100 samples, legal)
+- NN inference: 0.0025s/input
+- naive implementation: 1.138s/input
+- guided: 0.069s/input
+
+(20 samples, noisy)
+- NN inference: 0.0048s/input
+- naive: 0.979s/input
+- guided: 0.090s/input
+
+
+1000 samples
+noisy: 0.0949s/input 1000 False
+legal: 0.0431s/input 1000 True
+different scene: 0.0528s/input, 1000 False
+
+
+Case study on Lidar:
+Milestones:
+- Implement input generator, able to take Lidar images (Today)
+- Train network, compute bounding boxes, do verification
+- Plot and analyze results
