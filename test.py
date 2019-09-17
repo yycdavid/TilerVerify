@@ -1,5 +1,6 @@
 import os
 import image_generator
+import lidar_generator
 from PIL import Image
 import numpy as np
 import pickle
@@ -8,6 +9,7 @@ import scipy.io as sio
 import argparse
 import math
 import multiprocessing as mp
+import matplotlib.pyplot as plt
 
 # 1 Unit = 5 centimeters
 scene_params = {
@@ -22,6 +24,27 @@ camera_params = {
 'pixel_num': 32,
 'pixel_size': 0.16,
 }
+
+
+# For Lidar, 1 Unit = 5 centimeters
+scene_params_lidar = {
+'stick_width': 1.0,
+'stick_height': 40.0,
+'shape': 'circle',
+#'side_length': 10.0,
+'radius': 5.0,
+}
+
+sensor_params_lidar = {
+'height': 40.0,
+'ray_num': 64,
+'focal_length': 4.0,
+'pixel_size': 0.1,
+'max_distance': 300.0,
+}
+
+# measurement range: distance [20, 60], angle=[-45, 45]
+
 
 def gen_example_picture_with_range(viewer):
     offset = 10
@@ -43,15 +66,50 @@ def gen_example_picture_with_range(viewer):
     img_upper = img_upper.convert("L")
     img_upper.save('test_upper.jpg')
 
-
+# Get viewer in graphics
 def get_viewer(noise_mode='none', noise_scale=0.0):
     scene = image_generator.Scene(scene_params)
     viewer = image_generator.Viewer(camera_params, scene, noise_mode, noise_scale)
     return viewer
 
-def main():
+
+def get_sensor(noise_mode='none', noise_scale=0.0):
+    scene = lidar_generator.Scene(scene_params_lidar)
+    sensor = lidar_generator.Sensor(sensor_params_lidar, scene, noise_mode, noise_scale)
+    return sensor
+
+
+def gen_example_lidar_measurement(sensor):
+    angle = 0.0
+    distance = 40.0
+    pixel_matrix = sensor.take_measurement(angle, distance)
+
+    plt.figure()
+
+    plt.imshow(pixel_matrix, cmap='rainbow_r')
+    cb = plt.colorbar(extend='max')
+    plt.axis('off')
+    #plt.clim(0, color_max);
+    plt.savefig('test.jpg', bbox_inches='tight')
+
+    '''img = Image.fromarray(pixel_matrix)
+    img = img.convert("L")
+    import pdb; pdb.set_trace()
+    img.save('test.jpg')'''
+
+def test_graphics():
     viewer = get_viewer('uniform', 0.01)
     gen_example_picture_with_range(viewer)
+
+
+def test_lidar():
+    sensor = get_sensor('gaussian', 0.005)
+    gen_example_lidar_measurement(sensor)
+
+
+def main():
+    #test_graphics()
+    test_lidar()
 
 if __name__ == '__main__':
     try:
