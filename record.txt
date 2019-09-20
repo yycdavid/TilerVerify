@@ -19,6 +19,6 @@ different scene: 0.0528s/input, 1000 False
 
 Case study on Lidar:
 Milestones:
-- Implement input generator, able to take Lidar images (Today)
-- Train network, compute bounding boxes, do verification
+- Implement input generator, able to take Lidar images (DONE)
+- Train network (Today), compute bounding boxes, do verification
 - Plot and analyze results
