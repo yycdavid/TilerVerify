@@ -11,8 +11,8 @@ noise_scale=0.001
 TRAIN_DATA=train.pickle
 VALID_DATA=valid.pickle
 RESULT_FOLDER=lidar_"$noise_mode"_"$noise_scale"
-python3 trainer/train.py --dataset_folder lidar_train_"$noise_mode"_"$noise_scale" --train_data $TRAIN_DATA --val_data $VALID_DATA --result $RESULT_FOLDER --cuda
-#python3 trainer/convert_for_milp.py --name $RESULT_FOLDER
+#python3 trainer/train.py --dataset_folder lidar_train_"$noise_mode"_"$noise_scale" --train_data $TRAIN_DATA --val_data $VALID_DATA --result $RESULT_FOLDER --cuda
+python3 trainer/convert_for_milp.py --name $RESULT_FOLDER
 
 #OFFSET_RANGE=40
 #ANGLE_RANGE=60

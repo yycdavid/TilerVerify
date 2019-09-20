@@ -25,7 +25,22 @@ cnn_small_torch = nn.Sequential(OrderedDict([
         ('fc2', nn.Linear(100, 2))
     ]))
 
-def main():
+
+cnn_lidar = nn.Sequential(OrderedDict([
+        ('conv1', nn.Conv2d(1, 16, 4, stride=2, padding=1)),
+        ('relu1', nn.ReLU()),
+        ('conv2', nn.Conv2d(16, 16, 4, stride=2, padding=1)),
+        ('relu2', nn.ReLU()),
+        ('conv3', nn.Conv2d(16, 32, 4, stride=2, padding=1)),
+        ('relu3', nn.ReLU()),
+        ('flatten', Flatten()),
+        ('fc1', nn.Linear(8*8*32, 100)),
+        ('relu4', nn.ReLU()),
+        ('fc2', nn.Linear(100, 3))
+    ]))
+
+
+def main_for_road():
     parser = argparse.ArgumentParser(description='convert .pth checkpoint file from pytorch training for MIPVerify.')
     parser.add_argument('--name', help='name of experiment to convert the model parameters')
     args = parser.parse_args()
@@ -48,6 +63,38 @@ def main():
     parameters_torch["fc2/bias"] = cnn_small_torch[7].bias.data.numpy()
     converted_file_path = os.path.join(exp_dir, 'converted.mat')
     sio.savemat(converted_file_path, parameters_torch)
+
+
+def main_for_lidar():
+    parser = argparse.ArgumentParser(description='convert .pth checkpoint file from pytorch training for MIPVerify.')
+    parser.add_argument('--name', help='name of experiment to convert the model parameters')
+    args = parser.parse_args()
+    base_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+    result_root = os.path.join(base_dir, RESULTS_ROOT)
+    exp_dir = os.path.join(result_root, args.name)
+    model_file_path = os.path.join(exp_dir, 'best_model.pt')
+    assert os.path.isfile(model_file_path), "The experiment required has not been run or does not have the model trained."
+
+    cnn_lidar.load_state_dict(torch.load(model_file_path, map_location="cpu"))
+    parameters_torch=dict()
+    # transposing the tensor is necessary because pytorch and Julia have different conventions.
+    parameters_torch["conv1/weight"] = np.transpose(cnn_lidar[0].weight.data.numpy(), [2, 3, 1, 0])
+    parameters_torch["conv1/bias"] = cnn_lidar[0].bias.data.numpy()
+    parameters_torch["conv2/weight"] = np.transpose(cnn_lidar[2].weight.data.numpy(), [2, 3, 1, 0])
+    parameters_torch["conv2/bias"] = cnn_lidar[2].bias.data.numpy()
+    parameters_torch["conv3/weight"] = np.transpose(cnn_lidar[4].weight.data.numpy(), [2, 3, 1, 0])
+    parameters_torch["conv3/bias"] = cnn_lidar[4].bias.data.numpy()
+    parameters_torch["fc1/weight"] = np.transpose(cnn_lidar[7].weight.data.numpy())
+    parameters_torch["fc1/bias"] = cnn_lidar[7].bias.data.numpy()
+    parameters_torch["fc2/weight"] = np.transpose(cnn_lidar[9].weight.data.numpy())
+    parameters_torch["fc2/bias"] = cnn_lidar[9].bias.data.numpy()
+    converted_file_path = os.path.join(exp_dir, 'converted.mat')
+    sio.savemat(converted_file_path, parameters_torch)
+
+
+def main():
+    #main_for_road()
+    main_for_lidar()
 
 if __name__ == '__main__':
     try:
