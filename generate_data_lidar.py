@@ -43,6 +43,21 @@ def generate_dataset(sensor, num_images, distance_range, angle_range):
     dataset['images'] = images
     return dataset
 
+
+def generate_partial_train_dataset(shape, noise_mode, noise_scale, num_images, distance_range, angle_range):
+    sensor = get_sensor(shape, noise_mode, noise_scale)
+    # distance_range and angle_range are list, [low, high]
+    distances = np.random.uniform(low=distance_range[0], high=distance_range[1], size=num_images)
+    angles = np.random.uniform(low=angle_range[0], high=angle_range[1], size=num_images)
+    images = []
+    for i in tqdm(range(num_images)):
+        images.append(np.expand_dims(sensor.take_measurement(angles[i], distances[i]), axis=0))
+    images = np.concatenate(images, axis=0) # (N, H, W)
+    dataset = {}
+    dataset['images'] = images
+    return dataset
+
+
 def generate_dataset_for_error_est(viewer, offset_range, angle_range, offset_grid_num, angle_grid_num, num_points_per_side):
     # offset_range and angle_range are list, [low, high]
     # returned dataset has order: innermost is within a grid, then varying angle, then varying offset
@@ -134,19 +149,33 @@ def generate_partial_est_dataset(offset_range, angle_range, offset_grid_num, ang
 
 
 def gen_train_valid_data(distance_min_train, distance_max_train, angle_range_train, distance_min_valid, distance_max_valid, angle_range_valid, noise_mode, noise_scale, target_dir_name):
+    num_threads = 20
     # Generate training data
     training_size_per_class = 50000
+    training_size_per_thread = int(training_size_per_class/num_threads)
     distance_range_train = [distance_min_train, distance_max_train]
     angle_range_train = [-angle_range_train, angle_range_train]
     training_data = {}
     for shape in Shape:
-        sensor = get_sensor(shape, noise_mode, noise_scale*5) # Use more noise for training, so more robust
-        training_data[shape] = generate_dataset(sensor, training_size_per_class, distance_range_train, angle_range_train)
+        pool = mp.Pool(processes=num_threads)
+        results = [pool.apply_async(generate_partial_train_dataset, args=(shape, noise_mode, noise_scale*5, training_size_per_thread, distance_range_train, angle_range_train)) for _ in range(num_threads)]
+        sub_datasets = []
+        for i in range(num_threads):
+            sub_datasets.append(results[i].get())
+        training_data[shape] = {}
+        training_data[shape]['images'] = np.concatenate([sub_datasets[i]['images'] for i in range(num_threads)], axis=0)
         training_data[shape]['labels'] = np.array([shape.value for _ in range(training_size_per_class)])
 
     training_set = {}
     training_set['images'] = np.concatenate([training_data[shape]['images'] for shape in Shape], axis=0)
     training_set['labels'] = np.concatenate([training_data[shape]['labels'] for shape in Shape])
+
+    data_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'data', target_dir_name)
+    if not os.path.exists(data_dir):
+        print("Creating {}".format(data_dir))
+        os.makedirs(data_dir)
+    with open(os.path.join(data_dir, 'train.pickle'), 'wb') as f:
+        pickle.dump(training_set, f, protocol=pickle.HIGHEST_PROTOCOL)
 
     # Generate validation data
     validation_size_per_class = 500
@@ -155,19 +184,15 @@ def gen_train_valid_data(distance_min_train, distance_max_train, angle_range_tra
     validation_data = {}
     for shape in Shape:
         sensor = get_sensor(shape, noise_mode, noise_scale)
-        validation_data[shape] = generate_dataset(sensor, validing_size_per_class, distance_range_valid, angle_range_valid)
-        validation_data[shape]['labels'] = np.array([shape.value for _ in range(validing_size_per_class)])
+        validation_data[shape] = generate_dataset(sensor, validation_size_per_class, distance_range_valid, angle_range_valid)
+        validation_data[shape]['labels'] = np.array([shape.value for _ in range(validation_size_per_class)])
 
     validation_set = {}
     validation_set['images'] = np.concatenate([validation_data[shape]['images'] for shape in Shape], axis=0)
     validation_set['labels'] = np.concatenate([validation_data[shape]['labels'] for shape in Shape])
 
-    data_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'data', target_dir_name)
-    if not os.path.exists(data_dir):
-        print("Creating {}".format(data_dir))
-        os.makedirs(data_dir)
-    sio.savemat(os.path.join(data_dir, 'train.mat'), training_set)
-    sio.savemat(os.path.join(data_dir, 'valid.mat'), validation_set)
+    with open(os.path.join(data_dir, 'valid.pickle'), 'wb') as f:
+        pickle.dump(validation_set, f, protocol=pickle.HIGHEST_PROTOCOL)
 
 
 def gen_test_data_for_error_est(viewer, range, grid_size):
