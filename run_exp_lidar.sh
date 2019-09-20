@@ -6,12 +6,12 @@ ANGLE_RANGE_TRAIN=50
 ANGLE_RANGE_VALID=45
 noise_mode=gaussian
 noise_scale=0.001
-python3 generate_data_lidar.py --mode train --distance_max_train $DISTANCE_MAX_TRAIN --distance_min_train $DISTANCE_MIN_TRAIN --angle_range_train $ANGLE_RANGE_TRAIN --distance_max_valid $DISTANCE_MAX_VALID --distance_min_valid $DISTANCE_MIN_VALID --angle_range_valid $ANGLE_RANGE_VALID --noise $noise_mode --noise_scale $noise_scale --target_dir_name lidar_train_"$noise_mode"_"$noise_scale"
+#python3 generate_data_lidar.py --mode train --distance_max_train $DISTANCE_MAX_TRAIN --distance_min_train $DISTANCE_MIN_TRAIN --angle_range_train $ANGLE_RANGE_TRAIN --distance_max_valid $DISTANCE_MAX_VALID --distance_min_valid $DISTANCE_MIN_VALID --angle_range_valid $ANGLE_RANGE_VALID --noise $noise_mode --noise_scale $noise_scale --target_dir_name lidar_train_"$noise_mode"_"$noise_scale"
 
-#TRAIN_DATA=train_bigger_130000.mat
-#VALID_DATA=valid_bigger_1000.mat
-#RESULT_FOLDER="$noise_mode"_"$noise_scale"
-#python3 trainer/train.py --dataset_folder train_"$noise_mode"_"$noise_scale" --train_data $TRAIN_DATA --val_data $VALID_DATA --result $RESULT_FOLDER
+TRAIN_DATA=train.pickle
+VALID_DATA=valid.pickle
+RESULT_FOLDER=lidar_"$noise_mode"_"$noise_scale"
+python3 trainer/train.py --dataset_folder lidar_train_"$noise_mode"_"$noise_scale" --train_data $TRAIN_DATA --val_data $VALID_DATA --result $RESULT_FOLDER --cuda
 #python3 trainer/convert_for_milp.py --name $RESULT_FOLDER
 
 #OFFSET_RANGE=40

@@ -29,3 +29,28 @@ class RoadSceneDataset(torch.utils.data.Dataset):
         if self.transform:
             image = self.transform(image)
         return image, offset, angle
+
+
+class LidarDataset(torch.utils.data.Dataset):
+    def __init__(
+            self,
+            images,
+            labels,
+            transform=torchvision.transforms.ToTensor(),
+    ):
+        # each image is stored as np array (64,64), the dataset is stored as numpy array (N, 64, 64), (N)
+        self.images = images.astype(np.float32)
+        self.labels = labels
+        self.transform = transform # Totensor will transform (H,W,C) np array into (C, H, W) tensor
+        assert self.images.shape[0] == self.labels.shape[0], "Row mismatch"
+        self.num_obs = self.labels.shape[0]
+
+    def __len__(self):
+        return self.num_obs
+
+    def __getitem__(self, ix):
+        image = self.images[ix]
+        label = self.labels[ix]
+        if self.transform:
+            image = self.transform(image)
+        return image, label

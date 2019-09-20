@@ -103,7 +103,8 @@ class Sensor:
 
         if self.noise_mode != 'none':
             pixel_matrix = self._add_noise(pixel_matrix)
-        return pixel_matrix
+
+        return self._scale(pixel_matrix)
 
     def _compute_ray_direction_vec(self, i, j, theta):
         common_term = - self.pixel_size/2 + self.ray_num*self.pixel_size/2
@@ -138,6 +139,9 @@ class Sensor:
             return np.clip(continuous_image+noise, 0.0, self.max_distance)
         else:
             raise Exception('Noise mode not supported')
+
+    def _scale(self, distance_image):
+        return 1.0 - distance_image / self.max_distance
 
 
 class Viewer:
