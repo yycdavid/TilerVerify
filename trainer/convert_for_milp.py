@@ -40,10 +40,7 @@ cnn_lidar = nn.Sequential(OrderedDict([
     ]))
 
 
-def main_for_road():
-    parser = argparse.ArgumentParser(description='convert .pth checkpoint file from pytorch training for MIPVerify.')
-    parser.add_argument('--name', help='name of experiment to convert the model parameters')
-    args = parser.parse_args()
+def main_for_road(args):
     base_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
     result_root = os.path.join(base_dir, RESULTS_ROOT)
     exp_dir = os.path.join(result_root, args.name)
@@ -65,10 +62,7 @@ def main_for_road():
     sio.savemat(converted_file_path, parameters_torch)
 
 
-def main_for_lidar():
-    parser = argparse.ArgumentParser(description='convert .pth checkpoint file from pytorch training for MIPVerify.')
-    parser.add_argument('--name', help='name of experiment to convert the model parameters')
-    args = parser.parse_args()
+def main_for_lidar(args):
     base_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
     result_root = os.path.join(base_dir, RESULTS_ROOT)
     exp_dir = os.path.join(result_root, args.name)
@@ -92,9 +86,21 @@ def main_for_lidar():
     sio.savemat(converted_file_path, parameters_torch)
 
 
+def get_args():
+    parser = argparse.ArgumentParser(description='convert .pth checkpoint file from pytorch training for MIPVerify.')
+    parser.add_argument('--name', help='name of experiment to convert the model parameters')
+    parser.add_argument('--case', type=str, help='Case study to convert. Can be: road/lidar')
+
+
 def main():
-    #main_for_road()
-    main_for_lidar()
+    args = get_args()
+    if args.case == 'road':
+        main_for_road(args)
+    elif args.case == 'lidar':
+        main_for_lidar(args)
+    else:
+        raise ValueError("Only support case study road or lidar")
+
 
 if __name__ == '__main__':
     try:

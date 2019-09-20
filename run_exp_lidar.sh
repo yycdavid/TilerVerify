@@ -11,8 +11,8 @@ noise_scale=0.001
 TRAIN_DATA=train.pickle
 VALID_DATA=valid.pickle
 RESULT_FOLDER=lidar_"$noise_mode"_"$noise_scale"
-#python3 trainer/train.py --dataset_folder lidar_train_"$noise_mode"_"$noise_scale" --train_data $TRAIN_DATA --val_data $VALID_DATA --result $RESULT_FOLDER --cuda
-#python3 trainer/convert_for_milp.py --name $RESULT_FOLDER
+#python3 trainer/train.py --case lidar --dataset_folder lidar_train_"$noise_mode"_"$noise_scale" --train_data $TRAIN_DATA --val_data $VALID_DATA --result $RESULT_FOLDER --cuda
+#python3 trainer/convert_for_milp.py --case lidar --name $RESULT_FOLDER
 
 DISTANCE_MIN=20
 DISTANCE_MAX=60
@@ -24,7 +24,7 @@ for grid_size in 1.0
 do
     export JULIA_NUM_THREADS=$num_threads
     # Generate dataset for estimate and bound
-    python3 parallel_verify.py --offset_range $OFFSET_RANGE --angle_range $ANGLE_RANGE --grid_size $grid_size --num_threads $num_threads --oise $noise_mode --noise_scale $noise_scale
+    python3 parallel_verify_lidar.py --offset_range $OFFSET_RANGE --angle_range $ANGLE_RANGE --grid_size $grid_size --num_threads $num_threads --oise $noise_mode --noise_scale $noise_scale
     #python3 parallel_verify.py --offset_range 3 --angle_range 3 --grid_size 0.1 --num_threads $num_threads
 
     # Compute bound by verify

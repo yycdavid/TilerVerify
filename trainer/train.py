@@ -84,6 +84,7 @@ def test_lidar(args, model, device, test_loader):
 def get_args():
     parser = argparse.ArgumentParser(description='Training model for the synthetic road scene')
     # Training settings
+    parser.add_argument('--case', type=str, help='Case study to train. Can be: road/lidar')
     parser.add_argument('--dataset_folder', type=str, help='Folder of training and validation data')
     parser.add_argument('--train_data', type=str, help='File of training data')
     parser.add_argument('--val_data', type=str, help='File of validation data')
@@ -121,8 +122,7 @@ def load_data_lidar(data_dir, train_file, val_file):
     return train_data, eval_data
 
 
-def main_for_road():
-    args = get_args()
+def main_for_road(args):
     assert args.result is not None, 'Need to specify result directory'
     # Create folder to store results for this experiment
     base_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
@@ -181,8 +181,7 @@ def main_for_road():
     outputManager.say('Training finished. The best model is @ epoch {}'.format(best_epoch))
 
 
-def main_for_lidar():
-    args = get_args()
+def main_for_lidar(args):
     assert args.result is not None, 'Need to specify result directory'
     # Create folder to store results for this experiment
     base_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
@@ -242,9 +241,13 @@ def main_for_lidar():
 
 
 def main():
-    # main_for_road()
-    main_for_lidar()
-
+    args = get_args()
+    if args.case == 'road':
+        main_for_road(args)
+    elif args.case == 'lidar':
+        main_for_lidar(args)
+    else:
+        raise ValueError("Only support case study road or lidar")
 
 if __name__ == '__main__':
     try:
