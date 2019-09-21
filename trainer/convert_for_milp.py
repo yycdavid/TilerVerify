@@ -31,10 +31,10 @@ cnn_lidar = nn.Sequential(OrderedDict([
         ('relu1', nn.ReLU()),
         ('conv2', nn.Conv2d(16, 16, 4, stride=2, padding=1)),
         ('relu2', nn.ReLU()),
-        ('conv3', nn.Conv2d(16, 32, 4, stride=2, padding=1)),
-        ('relu3', nn.ReLU()),
+        #('conv3', nn.Conv2d(16, 32, 4, stride=2, padding=1)),
+        #('relu3', nn.ReLU()),
         ('flatten', Flatten()),
-        ('fc1', nn.Linear(8*8*32, 100)),
+        ('fc1', nn.Linear(8*8*16, 100)),
         ('relu4', nn.ReLU()),
         ('fc2', nn.Linear(100, 3))
     ]))
@@ -76,12 +76,12 @@ def main_for_lidar(args):
     parameters_torch["conv1/bias"] = cnn_lidar[0].bias.data.numpy()
     parameters_torch["conv2/weight"] = np.transpose(cnn_lidar[2].weight.data.numpy(), [2, 3, 1, 0])
     parameters_torch["conv2/bias"] = cnn_lidar[2].bias.data.numpy()
-    parameters_torch["conv3/weight"] = np.transpose(cnn_lidar[4].weight.data.numpy(), [2, 3, 1, 0])
-    parameters_torch["conv3/bias"] = cnn_lidar[4].bias.data.numpy()
-    parameters_torch["fc1/weight"] = np.transpose(cnn_lidar[7].weight.data.numpy())
-    parameters_torch["fc1/bias"] = cnn_lidar[7].bias.data.numpy()
-    parameters_torch["fc2/weight"] = np.transpose(cnn_lidar[9].weight.data.numpy())
-    parameters_torch["fc2/bias"] = cnn_lidar[9].bias.data.numpy()
+    #parameters_torch["conv3/weight"] = np.transpose(cnn_lidar[4].weight.data.numpy(), [2, 3, 1, 0])
+    #parameters_torch["conv3/bias"] = cnn_lidar[4].bias.data.numpy()
+    parameters_torch["fc1/weight"] = np.transpose(cnn_lidar[5].weight.data.numpy())
+    parameters_torch["fc1/bias"] = cnn_lidar[5].bias.data.numpy()
+    parameters_torch["fc2/weight"] = np.transpose(cnn_lidar[7].weight.data.numpy())
+    parameters_torch["fc2/bias"] = cnn_lidar[7].bias.data.numpy()
     converted_file_path = os.path.join(exp_dir, 'converted.mat')
     sio.savemat(converted_file_path, parameters_torch)
 

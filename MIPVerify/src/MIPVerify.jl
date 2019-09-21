@@ -13,7 +13,7 @@ using DataFrames
 const dependencies_path = joinpath(Pkg.dir("MIPVerify"), "deps")
 const root_path = dirname(dirname(@__DIR__))
 
-export find_adversarial_example, find_range_for_outputs, frac_correct, average_error_across_labels, interval_arithmetic, lp, mip
+export find_adversarial_example, find_range_for_outputs, find_range_for_outputs_diff, frac_correct, average_error_across_labels, interval_arithmetic, lp, mip
 
 @enum TighteningAlgorithm interval_arithmetic=1 lp=2 mip=3
 @enum AdversarialExampleObjective closest=1 worst=2
@@ -202,6 +202,52 @@ function find_range_for_outputs(
             end
             d[:PerturbedInputValue] = d[:PerturbedInput] |> getvalue
             results_dict[setting] = d
+        end
+    end
+
+    results_dict[:TotalTime] = total_time
+    return results_dict
+end
+
+
+function find_range_for_outputs_diff(
+    nn::NeuralNet,
+    input_lower_bound::Array{<:Real},
+    input_upper_bound::Array{<:Real},
+    label::Integer,
+    main_solver::MathProgBase.SolverInterface.AbstractMathProgSolver;
+    pp::PerturbationFamily = CustomPerturbationFamily(),
+    tightening_algorithm::TighteningAlgorithm = DEFAULT_TIGHTENING_ALGORITHM,
+    tightening_solver::MathProgBase.SolverInterface.AbstractMathProgSolver = get_default_tightening_solver(main_solver),
+    cache_model::Bool = true,
+    )::Dict
+
+    total_time = @elapsed begin
+        results_dict = Dict()
+        results_dict[:Results] = []
+        target_labels = [x for x in 0:2 if x != label]
+        for (k, target_label) in enumerate(target_labels)
+            d = Dict()
+            if k == 1
+                rebuild = true
+            else
+                rebuild = false
+            end
+            merge!(
+                d,
+                get_model_for_max_error(nn, input_lower_bound, input_upper_bound, pp, tightening_solver, tightening_algorithm, rebuild, cache_model)
+            )
+            m = d[:Model]
+            @objective(m, Min, d[:Output][label+1] - d[:Output][target_label+1])
+            setsolver(m, main_solver)
+            solve_time = @elapsed begin
+                d[:SolveStatus] = solve(m)
+            end
+            d[:SolveTime] = solve_time
+            d[:ObjectiveValue] = getobjectivevalue(m)
+            d[:PerturbedInputValue] = d[:PerturbedInput] |> getvalue
+            d[:TargetLabel] = target_label
+            append!(results_dict[:Results], d)
         end
     end
 

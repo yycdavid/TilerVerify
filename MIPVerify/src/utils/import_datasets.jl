@@ -2,7 +2,7 @@ using MAT
 using PyCall
 @pyimport pickle
 
-export read_datasets, read_custom_test_dataset, read_lidar_test_dataset, read_custom_dataset_with_range, read_custom_dataset_thread
+export read_datasets, read_custom_test_dataset, read_lidar_test_dataset, read_custom_dataset_with_range, read_custom_dataset_thread, read_lidar_dataset_thread
 
 abstract type Dataset end
 
@@ -224,6 +224,62 @@ function Base.show(io::IO, dataset::RangeThreadDataset)
     )
 end
 
+struct LidarRangeThreadDataset{T<:Real, U<:Real, V<:Real}
+    image_lower_bounds::Array{T, 4}
+    image_upper_bounds::Array{T, 4}
+    distance_lower_bounds::Array{U, 1}
+    distance_upper_bounds::Array{U, 1}
+    angle_lower_bounds::Array{V, 1}
+    angle_upper_bounds::Array{V, 1}
+    labels::Array{<:Integer, 1}
+    index::Array{<:Integer, 1}
+
+    function LidarRangeThreadDataset{T, U, V}(
+        image_lower_bounds::Array{T, 4},
+        image_upper_bounds::Array{T, 4},
+        distance_lower_bounds::Array{U, 1},
+        distance_upper_bounds::Array{U, 1},
+        angle_lower_bounds::Array{V, 1},
+        angle_upper_bounds::Array{V, 1},
+        labels::Array{<:Integer, 1},
+        index::Array{<:Integer, 1}
+        )::LidarRangeThreadDataset where {T<:Real, U<:Real, V<:Real}
+        return new(image_lower_bounds, image_upper_bounds, distance_lower_bounds, distance_upper_bounds, angle_lower_bounds, angle_upper_bounds, labels, index)
+    end
+end
+
+function LidarRangeThreadDataset(
+    image_lower_bounds::Array{T, 4},
+    image_upper_bounds::Array{T, 4},
+    distance_lower_bounds::Array{U, 1},
+    distance_upper_bounds::Array{U, 1},
+    angle_lower_bounds::Array{V, 1},
+    angle_upper_bounds::Array{V, 1},
+    labels::Array{<:Integer, 1},
+    index::Array{<:Integer, 1}
+    )::LidarRangeThreadDataset where {T<:Real, U<:Real, V<:Real}
+    LidarRangeThreadDataset{T, U, V}(image_lower_bounds, image_upper_bounds, distance_lower_bounds, distance_upper_bounds, angle_lower_bounds, angle_upper_bounds, labels, index)
+end
+
+function num_samples(dataset::LidarRangeThreadDataset)
+    return length(dataset.index)
+end
+
+function Base.show(io::IO, dataset::LidarRangeThreadDataset)
+    image_size = size(dataset.image_lower_bounds[1, :, :, :])
+    num_samples = MIPVerify.num_samples(dataset)
+    min_distance = minimum(dataset.distance_lower_bounds)
+    max_distance = maximum(dataset.distance_upper_bounds)
+    min_angle = minimum(dataset.angle_lower_bounds)
+    max_angle = maximum(dataset.angle_upper_bounds)
+    print(io,
+        "{LidarRangeThreadDataset}",
+        "\n    `image_lower_bounds, image_upper_bounds`: $num_samples test points, image size $image_size.",
+        "\n    `distance_lower_bounds, distance_upper_bounds, angle_lower_bounds, angle_upper_bounds`: distances in [$min_distance, $max_distance] and angles in [$min_angle, $max_angle]."
+    )
+end
+
+
 
 """
 $(TYPEDEF)
@@ -331,4 +387,17 @@ function read_custom_dataset_thread(relative_path::String)::RangeThreadDataset
     test_data["image_upper_bounds"] = reshape(test_data["image_upper_bounds"], (size(test_data["image_upper_bounds"])...,1)) #(N,H,W,C)
     test_data["images"] = reshape(test_data["images"], (size(test_data["images"])...,1)) #(N,H,W,C)
     return RangeThreadDataset(test_data["image_lower_bounds"]/255, test_data["image_upper_bounds"]/255, test_data["offset_lower_bounds"][:], test_data["offset_upper_bounds"][:], test_data["angle_lower_bounds"][:], test_data["angle_upper_bounds"][:], test_data["images"], test_data["offsets"][:], test_data["angles"][:], test_data["index"][:])
+end
+
+
+function read_lidar_dataset_thread(relative_path::String, label::Integer)::LidarRangeThreadDataset
+    absolute_path = joinpath(root_path, relative_path)
+    test_data = matread(absolute_path)
+    # Add channel dimension
+    test_data["image_lower_bounds"] = reshape(test_data["image_lower_bounds"], (size(test_data["image_lower_bounds"])...,1)) #(N,H,W,C)
+    test_data["image_upper_bounds"] = reshape(test_data["image_upper_bounds"], (size(test_data["image_upper_bounds"])...,1)) #(N,H,W,C)
+
+    labels = repeat([label],inner=length(test_data["index"][:]))
+
+    return LidarRangeThreadDataset(test_data["image_lower_bounds"], test_data["image_upper_bounds"], test_data["distance_lower_bounds"][:], test_data["distance_upper_bounds"][:], test_data["angle_lower_bounds"][:], test_data["angle_upper_bounds"][:], labels, test_data["index"][:])
 end

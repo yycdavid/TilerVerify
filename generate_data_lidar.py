@@ -24,7 +24,7 @@ scene_params_lidar = {
 
 sensor_params_lidar = {
 'height': 40.0,
-'ray_num': 64,
+'ray_num': 32,
 'focal_length': 4.0,
 'pixel_size': 0.1,
 'max_distance': 300.0,

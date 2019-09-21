@@ -37,7 +37,7 @@ scene_params_lidar = {
 
 sensor_params_lidar = {
 'height': 40.0,
-'ray_num': 64,
+'ray_num': 32,
 'focal_length': 4.0,
 'pixel_size': 0.1,
 'max_distance': 300.0,
@@ -98,8 +98,8 @@ def gen_example_lidar_measurement(sensor):
     img.save('test.jpg')'''
 
 def gen_example_mesurement_with_range(sensor):
-    distance = 30.0
-    angle = 40.0
+    distance = 60.0
+    angle = -45.0
     pixel_matrix = sensor.take_measurement(angle, distance)
     # Generate a picture with range
     delta_x = 2.0
@@ -162,8 +162,8 @@ def test_graphics():
 def test_lidar():
     sensor = get_sensor('gaussian', 0.001)
     #sensor = get_sensor()
-    #gen_example_mesurement_with_range(sensor)
-    test_range_lidar(sensor)
+    gen_example_mesurement_with_range(sensor)
+    #test_range_lidar(sensor)
 
 
 def main():

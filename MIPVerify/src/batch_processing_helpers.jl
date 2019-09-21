@@ -1,4 +1,4 @@
-export batch_find_untargeted_attack, batch_find_error_bound, batch_find_error_bound_thread
+export batch_find_untargeted_attack, batch_find_error_bound, batch_find_error_bound_thread, batch_verify_class_thread
 
 @enum SolveRerunOption never=1 always=2 resolve_ambiguous_cases=3 refine_insecure_cases=4 retarget_infeasible_cases=5
 
@@ -126,6 +126,29 @@ function create_summary_file_if_not_present_for_error(summary_file_path::String)
     end
 end
 
+function create_summary_file_if_not_present_for_lidar(summary_file_path::String)
+    if !isfile(summary_file_path)
+        summary_header_line = [
+            "SampleNumber",
+            "DistanceMin",
+            "DistanceMax",
+            "AngleMin",
+            "AngleMax",
+            "TargetClass1",
+            "LogitDiff1Solved",
+            "LogitDiff1Status",
+            "TargetClass2",
+            "LogitDiff2Solved",
+            "LogitDiff2Status",
+            "SolveTime",
+        ]
+
+        open(summary_file_path, "w") do file
+            writecsv(file, [summary_header_line])
+        end
+    end
+end
+
 function verify_target_indices(target_indices::AbstractArray{<:Integer}, dataset::MIPVerify.LabelledDataset)
     num_samples = MIPVerify.num_samples(dataset)
     @assert(
@@ -203,6 +226,24 @@ function initialize_batch_solve_for_error_thread(
     return (save_path, thread_summary_file_path, dt)
 end
 
+function initialize_batch_solve_for_lidar_thread(
+    save_path::String,
+    thread_number::Integer
+    )::Tuple{String,String,DataFrames.DataFrame}
+
+    summary_file_name = "summary.csv"
+
+    summary_file_path = joinpath(save_path, summary_file_name)
+    summary_file_path|> create_summary_file_if_not_present_for_lidar
+
+    dt = CSV.read(summary_file_path)
+
+    thread_summary_file_name = "summary_$(thread_number).csv"
+    thread_summary_file_path = joinpath(save_path, thread_summary_file_name)
+    thread_summary_file_path|> create_summary_file_if_not_present_for_lidar
+    return (save_path, thread_summary_file_path, dt)
+end
+
 function save_to_disk(
     sample_number::Integer,
     main_path::String,
@@ -255,6 +296,30 @@ function save_to_csv_for_error(
 end
 
 
+
+function save_to_csv_for_lidar(
+    sample_number::Integer,
+    summary_file_path::String,
+    d::Dict
+    )
+    summary_line = [
+        sample_number,
+        d[:DistanceMin],
+        d[:DistanceMax],
+        d[:AngleMin],
+        d[:AngleMax],
+        d[:TargetClass1],
+        d[:MinDiff1],
+        d[:MinDiff1Status],
+        d[:TargetClass2],
+        d[:MinDiff2],
+        d[:MinDiff2Status],
+        d[:SolveTime],
+    ] .|> string
+    open(summary_file_path, "a") do file
+        writecsv(file, [summary_line])
+    end
+end
 """
 $(SIGNATURES)
 
@@ -624,6 +689,87 @@ function batch_find_error_bound_thread(
                 save_to_csv_for_error(dataset.index[sample_number], thread_summary_file_path, summary_item)
                 for setting in [:OffsetMin, :OffsetMax, :AngleMin, :AngleMax]
                     if result_dict[setting][:SolveStatus] != :Optimal
+                        append!(non_optimal_entries, sample_number)
+                        break
+                    end
+                end
+            end
+        end
+    end
+
+    # Report if any entry is not solved to optimal
+    if !isempty(non_optimal_entries)
+        println("There are samples not solved to optimal:\n")
+        println(non_optimal_entries)
+    else
+        println("All samples are solved to optimal.")
+    end
+    io = open(joinpath(save_path, "time.txt"), "a")
+    write(io, "Time for this thread is $(time_spent)")
+    close(io)
+    return nothing
+end
+
+
+function batch_verify_class_thread(
+    nn::NeuralNet,
+    dataset::MIPVerify.LidarRangeThreadDataset,
+    main_solver::MathProgBase.SolverInterface.AbstractMathProgSolver,
+    thread_number::Integer;
+    save_path::String = ".",
+    solve_rerun_option::MIPVerify.SolveRerunOption = MIPVerify.never,
+    pp::MIPVerify.PerturbationFamily = MIPVerify.CustomPerturbationFamily(),
+    tightening_algorithm::MIPVerify.TighteningAlgorithm = DEFAULT_TIGHTENING_ALGORITHM,
+    tightening_solver::MathProgBase.SolverInterface.AbstractMathProgSolver = MIPVerify.get_default_tightening_solver(main_solver),
+    )::Void
+
+    (main_path, thread_summary_file_path, dt) = initialize_batch_solve_for_lidar_thread(
+        save_path,
+        thread_number
+        )
+    num_entries = MIPVerify.num_samples(dataset)
+    non_optimal_entries = []
+    time_spent = @elapsed begin
+        #for sample_number in 1:num_entries
+        for sample_number in 1:5
+            if run_on_sample_for_untargeted_attack(sample_number, dt, solve_rerun_option)
+                info(MIPVerify.LOGGER, "Working on index $(dataset.index[sample_number])")
+
+                input_lower_bound = dataset.image_lower_bounds[sample_number:sample_number,:,:,:]
+                input_upper_bound = dataset.image_upper_bounds[sample_number:sample_number,:,:,:]
+                distance_low = dataset.distance_lower_bounds[sample_number]
+                distance_high = dataset.distance_upper_bounds[sample_number]
+                angle_low = dataset.angle_lower_bounds[sample_number]
+                angle_high = dataset.angle_upper_bounds[sample_number]
+                label = dataset.labels[sample_number]
+                summary_item = Dict()
+                summary_item[:DistanceMin] = distance_low
+                summary_item[:DistanceMax] = distance_high
+                summary_item[:AngleMin] = angle_low
+                summary_item[:AngleMax] = angle_high
+
+                result_dict = MIPVerify.find_range_for_outputs_diff(
+                    nn,
+                    input_lower_bound,
+                    input_upper_bound,
+                    label,
+                    main_solver,
+                    pp = pp,
+                    tightening_algorithm = tightening_algorithm,
+                    tightening_solver = tightening_solver,
+                )
+
+                summary_item[:TargetClass1] = result_dict[:Results][1][:TargetLabel]
+                summary_item[:MinDiff1] = result_dict[:Results][1][:ObjectiveValue]
+                summary_item[:MinDiff1Status] = result_dict[:Results][1][:SolveStatus]
+                summary_item[:TargetClass2] = result_dict[:Results][2][:TargetLabel]
+                summary_item[:MinDiff2] = result_dict[:Results][2][:ObjectiveValue]
+                summary_item[:MinDiff2Status] = result_dict[:Results][2][:SolveStatus]
+                summary_item[:SolveTime] = result_dict[:TotalTime]
+
+                save_to_csv_for_lidar(dataset.index[sample_number], thread_summary_file_path, summary_item)
+                for d in result_dict[:Results]
+                    if d[:SolveStatus] != :Optimal
                         append!(non_optimal_entries, sample_number)
                         break
                     end
