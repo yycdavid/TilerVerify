@@ -80,6 +80,22 @@ function get_custom_network_params(model_name::String, exp_name::String)::Neural
             fc1, ReLU(),
             fc2], model_name)
         return nn
+    elseif model_name == "CNN_lidar"
+        param_dict = matread(joinpath(root_path, "trained_models", exp_name, "converted.mat"))
+        conv1 = get_conv_params(param_dict, "conv1", (4, 4, 1, 16), expected_stride = 2)
+        conv2 = get_conv_params(param_dict, "conv2", (4, 4, 16, 16), expected_stride = 2)
+        conv3 = get_conv_params(param_dict, "conv3", (4, 4, 16, 16), expected_stride = 2)
+        fc1 = get_matrix_params(param_dict, "fc1", (8*8*32, 100))
+        fc2 = get_matrix_params(param_dict, "fc2", (100, 2))
+
+        nn = Sequential([
+            conv1, ReLU(interval_arithmetic),
+            conv2, ReLU(),
+            conv3, ReLU(),
+            Flatten([1, 3, 2, 4]),
+            fc1, ReLU(),
+            fc2], model_name)
+        return nn
     else
         throw(DomainError("Unknown network named $model_name."))
     end

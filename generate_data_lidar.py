@@ -289,10 +289,9 @@ def generate_partial_dataset(shape, distance_range, angle_range, distance_grid_n
         j = index % angle_grid_num
         distance = distance_range[0] + i * distance_grid_size + distance_delta
         angle = angle_range[0] + j * angle_grid_size + angle_delta
-        image, lower_bound_matrix, upper_bound_matrix = sensor.take_measurement_with_range(distance, angle, distance_delta, angle_delta)
+        lower_bound_matrix, upper_bound_matrix = sensor.take_measurement_with_range(distance, angle, distance_delta, angle_delta)
         image_lower_bounds.append(np.expand_dims(lower_bound_matrix, axis=0))
         image_upper_bounds.append(np.expand_dims(upper_bound_matrix, axis=0))
-        images.append(np.expand_dims(image, axis=0))
         distance_lower_bounds.append(distance - distance_delta)
         distance_upper_bounds.append(distance + distance_delta)
         angle_lower_bounds.append(angle - angle_delta)

@@ -291,6 +291,15 @@ function read_custom_test_dataset(relative_path::String)::DoubleLabeledImageData
     return DoubleLabeledImageDataset(test_data["images"]/255, test_data["offsets"][:], test_data["angles"][:])
 end
 
+function read_lidar_test_dataset(relative_path::String)::LabelledImageDataset
+    # Argument is the relative path of the .mat file to the root directory of the repo
+    # Stored data images does not have the channel dimension. So here add it
+    absolute_path = joinpath(root_path, relative_path)
+    test_data = matread(absolute_path)
+    test_data["images"] = reshape(test_data["images"], (size(test_data["images"])...,1))
+    return LabelledImageDataset(test_data["images"], test_data["labels"][:])
+end
+
 function read_custom_dataset_with_range(relative_path::String)::RangeDataset
     absolute_path = joinpath(root_path, relative_path)
     test_data = matread(absolute_path)
