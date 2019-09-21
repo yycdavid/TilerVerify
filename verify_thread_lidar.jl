@@ -8,9 +8,9 @@ data_name = ARGS[2]
 thread_number = parse(Int64, ARGS[3])
 
 # Get info from data_name
-offset_range = parse(Int64, Base.split(data_name,"_")[3])
-angle_range = parse(Int64, Base.split(data_name,"_")[5])
-grid_size = parse(Float64, Base.split(data_name,"_")[7])
+#offset_range = parse(Int64, Base.split(data_name,"_")[3])
+#angle_range = parse(Int64, Base.split(data_name,"_")[5])
+#grid_size = parse(Float64, Base.split(data_name,"_")[7])
 
 nnparams = get_custom_network_params("CNN_lidar", exp_name)
 
@@ -19,7 +19,7 @@ MIPVerify.setloglevel!("info")
 # primarily meant as a sanity check.
 # note that determining the fraction correct for is highly inefficient, and can be very slow for large networks!
 
-test_dataset = read_custom_test_dataset("data/valid.mat")
+test_dataset = read_lidar_test_dataset("data/lidar_train_gaussian_0.001/valid.pickle")
 println("Average error of first 200 is $(frac_correct(nnparams, test_dataset, 2000))")
 
 #test_dataset_with_range = read_custom_dataset_thread("data/$(data_name)/thread_$(thread_number).mat")
