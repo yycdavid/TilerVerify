@@ -1,0 +1,34 @@
+import os
+import argparse
+import sys
+import generate_data_lidar
+import multiprocessing as mp
+
+# Use mp pool, Julia, to run julia script for verify in parallel; .jl script will
+# operate on a single data file and produce result as a single summary file
+
+# Process and conbine all the summary files to get results, save and clean
+
+def main():
+    parser = argparse.ArgumentParser(description='Running verifying experiment with parallelism')
+    parser.add_argument('--distance_min', type=int, help='Min distance, for generating test datasets')
+    parser.add_argument('--distance_max', type=int, help='Max distance, for generating test datasets')
+    parser.add_argument('--angle_range', type=int, help='Range for angle, for generating test datasets')
+    parser.add_argument('--grid_size', type=float, help='Grid size for calculating error')
+    parser.add_argument('--num_threads', type=int, help='Number of threads to run the verifier')
+    parser.add_argument('--noise', type=str, default='none', help='Noise mode, can be none/uniform/gaussian')
+    parser.add_argument('--noise_scale', type=float, default=0.05, help='Scale of noise, for uniform it is the max, for gaussian it is one sigma')
+    args = parser.parse_args()
+
+    # Generate data for verify as separate files for each thread, in a subdirectory in data
+    generate_data_lidar.gen_data_for_verify_parallel(args.distance_min, args.distance_max, args.angle_range, args.grid_size, args.num_threads, args.noise, args.noise_scale)
+
+
+
+if __name__ == '__main__':
+    try:
+        main()
+    except Exception as err:
+        print(err)
+        import pdb
+        pdb.post_mortem()

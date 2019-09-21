@@ -80,8 +80,8 @@ def get_sensor(noise_mode='none', noise_scale=0.0):
 
 
 def gen_example_lidar_measurement(sensor):
-    angle = 0.0
-    distance = 40.0
+    angle = 45.0
+    distance = 20.0
     pixel_matrix = sensor.take_measurement(angle, distance)
 
     plt.figure()
@@ -97,14 +97,73 @@ def gen_example_lidar_measurement(sensor):
     import pdb; pdb.set_trace()
     img.save('test.jpg')'''
 
+def gen_example_mesurement_with_range(sensor):
+    distance = 30.0
+    angle = 40.0
+    pixel_matrix = sensor.take_measurement(angle, distance)
+    # Generate a picture with range
+    delta_x = 2.0
+    delta_angle = 4.0
+    lower_bound_matrix, upper_bound_matrix = sensor.take_measurement_with_range(distance, angle, delta_x, delta_angle)
+
+    plt.figure()
+    plt.imshow(pixel_matrix, cmap='rainbow_r')
+    cb = plt.colorbar(extend='max')
+    plt.axis('off')
+    plt.savefig('test.jpg', bbox_inches='tight')
+
+    plt.figure()
+    plt.imshow(lower_bound_matrix, cmap='rainbow_r')
+    cb = plt.colorbar(extend='max')
+    plt.axis('off')
+    plt.savefig('test_lower.jpg', bbox_inches='tight')
+
+    plt.figure()
+    plt.imshow(upper_bound_matrix, cmap='rainbow_r')
+    cb = plt.colorbar(extend='max')
+    plt.axis('off')
+    plt.savefig('test_upper.jpg', bbox_inches='tight')
+
+
+def test_range_lidar(sensor):
+    np.random.seed(1)
+    eps = 1e-6
+    # randomly select center d, angle
+    num_boxes = 10
+    num_samples_per_box = 50
+    delta_x = 2.0
+    delta_angle = 4.0
+    distances = np.random.uniform(low=20+delta_x, high=60-delta_x, size=num_boxes)
+    angles = np.random.uniform(low=-45+delta_angle, high=45-delta_angle, size=num_boxes)
+
+    for i in tqdm(range(num_boxes)):
+        # Compute range
+        lower_bound_matrix, upper_bound_matrix = sensor.take_measurement_with_range(distances[i], angles[i], delta_x, delta_angle)
+        # Randomly sample points within
+        distances_in = np.random.uniform(low=distances[i]-delta_x, high=distances[i]+delta_x, size=num_samples_per_box)
+        angles_in = np.random.uniform(low=angles[i]-delta_angle, high=angles[i]+delta_angle, size=num_samples_per_box)
+        results = []
+        for j in range(num_samples_per_box):
+            pixel_matrix = sensor.take_measurement(angles_in[j], distances_in[j])
+            is_within = np.all(pixel_matrix >= lower_bound_matrix - eps) and np.all(pixel_matrix <= upper_bound_matrix + eps)
+            results.append(is_within)
+
+        # Check if images all lie within
+        total_num = len(results)
+        num_within = sum(results)
+        print('{} out of {} are within'.format(num_within, total_num))
+
+
 def test_graphics():
     viewer = get_viewer('uniform', 0.01)
     gen_example_picture_with_range(viewer)
 
 
 def test_lidar():
-    sensor = get_sensor('gaussian', 0.005)
-    gen_example_lidar_measurement(sensor)
+    sensor = get_sensor('gaussian', 0.001)
+    #sensor = get_sensor()
+    #gen_example_mesurement_with_range(sensor)
+    test_range_lidar(sensor)
 
 
 def main():

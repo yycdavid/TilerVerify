@@ -17,18 +17,18 @@ RESULT_FOLDER=lidar_"$noise_mode"_"$noise_scale"
 DISTANCE_MIN=20
 DISTANCE_MAX=60
 ANGLE_RANGE=45
-num_threads=20
+num_threads=21
 #exp_name="$noise_mode"_"$noise_scale"
 exp_name=$RESULT_FOLDER
 for grid_size in 1.0
 do
     export JULIA_NUM_THREADS=$num_threads
     # Generate dataset for estimate and bound
-    python3 parallel_verify_lidar.py --offset_range $OFFSET_RANGE --angle_range $ANGLE_RANGE --grid_size $grid_size --num_threads $num_threads --oise $noise_mode --noise_scale $noise_scale
+    python3 parallel_verify_lidar.py --distance_min $DISTANCE_MIN --distance_max $DISTANCE_MAX --angle_range $ANGLE_RANGE --grid_size $grid_size --num_threads $num_threads --noise $noise_mode --noise_scale $noise_scale
     #python3 parallel_verify.py --offset_range 3 --angle_range 3 --grid_size 0.1 --num_threads $num_threads
 
     # Compute bound by verify
-    data_name=verify_offset_"$OFFSET_RANGE"_angle_"$ANGLE_RANGE"_grid_"$grid_size"_thread_"$num_threads""$noise_mode""$noise_#scale"
+    data_name=lidar_distance_min_"$DISTANCE_MIN"_max_"$DISTANCE_MAX"_angle_"$ANGLE_RANGE"_grid_"$grid_size"_thread_"$num_threads""$noise_mode""$noise_scale"
     #data_name=verify_offset_3_angle_3_grid_0.1_thread_20none0.05
     #for thread_number in $(seq 0 $(expr $num_threads - 1))
     #do
