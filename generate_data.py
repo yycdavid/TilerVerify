@@ -192,6 +192,13 @@ def get_viewer(noise_mode='none', noise_scale=0.0):
     viewer = image_generator.Viewer(camera_params, scene, noise_mode, noise_scale)
     return viewer
 
+
+def get_new_viewer(noise_mode='none', noise_scale=0.0):
+    scene = image_generator.NewScene(scene_params)
+    viewer = image_generator.Viewer(camera_params, scene, noise_mode, noise_scale)
+    return viewer
+
+
 def partial_dataset(dataset, index_range):
     start = index_range[0]
     finish = index_range[1]

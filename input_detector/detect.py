@@ -15,7 +15,7 @@ import sys
 base_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 if not base_dir in sys.path:
     sys.path.append(base_dir)
-from generate_data import get_viewer
+from generate_data import get_viewer, get_new_viewer
 
 from trainer.dataset import RoadSceneDataset
 
@@ -261,9 +261,19 @@ def main():
     print('Time spent per input (guided): {}'.format((end_t - start_t)/num_images))
 
 
+def main_test():
+    viewer = get_new_viewer()
+    offset = 10.0
+    angle = 0.0
+    print("Example image offset: {}, angle: {}".format(offset, angle))
+    example_image = viewer.take_picture(offset, angle)
+    img = Image.fromarray(example_image)
+    img = img.convert("L")
+    img.save('test_new.jpg')
+
 if __name__ == '__main__':
     try:
-        main()
+        main_test()
     except Exception as err:
         print(err)
         import pdb

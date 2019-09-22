@@ -66,6 +66,71 @@ class Scene:
         return ((x2-x)*i1 + (x-x1)*i2)/(x2-x1)
 
 
+class NewScene:
+    """NewScene class, represent the scene
+    Support query into the scene to get intensity value at a point
+    Support query to get intensity range in a specific shape
+    """
+    def __init__(self, scene_params):
+        super(NewScene, self).__init__()
+        self.line_width = scene_params['line_width']
+        self.road_width = scene_params['road_width']
+        self.shade_width = scene_params['shade_width']
+        self.center_line_interval = 6.0
+        self.side_line_intensity = SIDE_LINE_INTENSITY
+        self.center_line_intensity = CENTER_LINE_INTENSITY
+        self.road_intensity = ROAD_INTENSITY
+        self.sky_intensity = SKY_INTENSITY
+
+        self.xm1 = self.center_line_interval/2 - self.shade_width
+        self.x0 = self.center_line_interval/2 + self.shade_width
+        self.x1 = self.center_line_interval/2 + self.line_width/2 + self.line_width/2 - self.shade_width # centerline inner edge
+        self.x2 = self.center_line_interval/2 + self.line_width/2 + self.line_width/2 + self.shade_width # centerline outer edge
+        self.x3 = self.center_line_interval/2 + self.line_width/2 + self.road_width - self.line_width/2 - self.shade_width # side line left outer edge
+        self.x4 = self.center_line_interval/2 + self.line_width/2 + self.road_width - self.line_width/2 + self.shade_width # side line left inner edge
+        self.x5 = self.center_line_interval/2 + self.line_width/2 + self.road_width + self.line_width/2 - self.shade_width # side line right inner edge
+        self.x6 = self.center_line_interval/2 + self.line_width/2 + self.road_width + self.line_width/2 + self.shade_width # side line right outer edge
+        # check the road is reasonable
+        s = [self.xm1, self.x0, self.x1, self.x2, self.x3, self.x4, self.x5, self.x6]
+        assert sorted(range(len(s)), key=lambda k: s[k]) == [0,1,2,3,4,5,6,7], "Scene dimensions not reasonable, change the paramters"
+        self.critical_points = [-self.x6, -self.x5, -self.x4, -self.x3, -self.x2, -self.x1, -self.x0, -self.xm1, self.xm1, self.x0, self.x1, self.x2, self.x3, self.x4, self.x5, self.x6]
+
+    def get_intensity_at_point(self, x, y):
+        if x<0:
+            x = -x # Scene is symmetric
+        if x >= self.x6 or (x>=self.x2 and x<=self.x3) or x<=self.xm1:
+            return self.road_intensity
+        elif x > self.x5:
+            return self._interpolate(self.x5, self.side_line_intensity, self.x6, self.road_intensity, x)
+        elif x > self.x4:
+            return self.side_line_intensity
+        elif x > self.x3:
+            return self._interpolate(self.x3, self.road_intensity, self.x4, self.side_line_intensity, x)
+        elif x > self.x1:
+            return self._interpolate(self.x1, self.center_line_intensity, self.x2, self.road_intensity, x)
+        elif x > self.x0:
+            return self.center_line_intensity
+        else:
+            return self._interpolate(self.xm1, self.road_intensity, self.x0, self.center_line_intensity, x)
+
+    def get_intensity_range(self, x_min, x_max):
+        # Get the range for intensity within (x_min, x_max)
+        # Get the set of critical points within (x_min, x_max)
+        critical_points = [x_min, x_max]
+        for x in self.critical_points:
+            if (x_min < x) and (x < x_max):
+                critical_points.append(x)
+        # Read intensity of each critical points, take max and min values
+        critical_intensities = [self.get_intensity_at_point(x,0) for x in critical_points]
+        return (min(critical_intensities), max(critical_intensities))
+
+    def get_sky_intensity(self):
+        return self.sky_intensity
+
+    def _interpolate(self, x1, i1, x2, i2, x):
+        return ((x2-x)*i1 + (x-x1)*i2)/(x2-x1)
+
+
 
 class Viewer:
     """Viewer class, represent the camera.
