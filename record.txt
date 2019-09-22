@@ -23,3 +23,5 @@ Milestones:
 - Train network (DONE), compute bounding boxes,
 - do verification
 - Plot and analyze results
+
+In analysis for lidar, remember to revert axes when plotting heatmaps (indices traverse distance first )

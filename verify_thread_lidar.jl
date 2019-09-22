@@ -29,12 +29,12 @@ test_dataset_with_range = read_lidar_dataset_thread("data/$(data_name)/$(shape)_
 MIPVerify.batch_verify_class_thread(
     nnparams,
     test_dataset_with_range,
-    GurobiSolver(Gurobi.Env(), TimeLimit=1200),
+    GurobiSolver(Gurobi.Env(), TimeLimit=10),
     thread_number,
     shape,
     save_path = joinpath("data", data_name),
     pp = MIPVerify.CustomPerturbationFamily(),
     solve_rerun_option = MIPVerify.never,
     tightening_algorithm=mip,
-    tightening_solver = GurobiSolver(Gurobi.Env(), OutputFlag=0, TimeLimit=1200),
+    tightening_solver = GurobiSolver(Gurobi.Env(), OutputFlag=0, TimeLimit=10),
 )

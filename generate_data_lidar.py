@@ -269,9 +269,18 @@ def partial_dataset(dataset, index_range):
 
 def generate_partial_dataset(shape, distance_range, angle_range, distance_grid_num, angle_grid_num, index_range, thread_num, save_dir, noise_mode, noise_scale):
     # distance_range and angle_range are list, [low, high]
-    distance_grid_size = (distance_range[1] - distance_range[0])/distance_grid_num
+    # Get distance center and deltas, uniform on inverse scale
+    d_inv_start = 1.0 / distance_range[1]
+    d_inv_end = 1.0 / distance_range[0]
+    d_inv_step = (d_inv_end - d_inv_start) / distance_grid_num
+    d_inv_bounds = np.arange(d_inv_start, d_inv_end + 1e-5, d_inv_step)
+    d_bounds = np.flip(1.0/d_inv_bounds)
+    assert len(d_bounds) == distance_grid_num + 1, "distance bounds count incorrect"
+
+    d_centers = [(d_bounds[i] + d_bounds[i+1])/2 for i in range(distance_grid_num)]
+    d_deltas = [(d_bounds[i+1] - d_bounds[i])/2 for i in range(distance_grid_num)]
+
     angle_grid_size = (angle_range[1] - angle_range[0])/angle_grid_num
-    distance_delta = distance_grid_size / 2
     angle_delta = angle_grid_size / 2
     image_lower_bounds = []
     image_upper_bounds = []
@@ -285,9 +294,10 @@ def generate_partial_dataset(shape, distance_range, angle_range, distance_grid_n
     sub_dataset['index'] = np.array(range(start, finish))
     sensor = get_sensor(shape, noise_mode, noise_scale)
     for index in tqdm(range(start, finish)):
-        i = index // angle_grid_num
-        j = index % angle_grid_num
-        distance = distance_range[0] + i * distance_grid_size + distance_delta
+        i = index // distance_grid_num
+        j = index % distance_grid_num
+        distance = d_centers[j]
+        distance_delta = d_deltas[j]
         angle = angle_range[0] + j * angle_grid_size + angle_delta
         lower_bound_matrix, upper_bound_matrix = sensor.take_measurement_with_range(distance, angle, distance_delta, angle_delta)
         image_lower_bounds.append(np.expand_dims(lower_bound_matrix, axis=0))

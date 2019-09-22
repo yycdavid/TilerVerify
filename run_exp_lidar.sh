@@ -14,7 +14,7 @@ RESULT_FOLDER=lidar_small_"$noise_mode"_"$noise_scale"
 #python3 trainer/train.py --case lidar --dataset_folder lidar_train_small_"$noise_mode"_"$noise_scale" --train_data $TRAIN_DATA --val_data $VALID_DATA --result $RESULT_FOLDER
 #python3 trainer/convert_for_milp.py --case lidar --name $RESULT_FOLDER
 
-DISTANCE_MIN=20
+DISTANCE_MIN=30
 DISTANCE_MAX=60
 ANGLE_RANGE=45
 num_threads=21
@@ -24,7 +24,7 @@ for grid_size in 1.0
 do
 #    export JULIA_NUM_THREADS=$num_threads
 #    # Generate dataset for estimate and bound
-    #python3 parallel_verify_lidar.py --distance_min $DISTANCE_MIN --distance_max $DISTANCE_MAX --angle_range $ANGLE_RANGE --grid_size $grid_size --num_threads $num_threads --noise $noise_mode --noise_scale $noise_scale
+    python3 parallel_verify_lidar.py --distance_min $DISTANCE_MIN --distance_max $DISTANCE_MAX --angle_range $ANGLE_RANGE --grid_size $grid_size --num_threads $num_threads --noise $noise_mode --noise_scale $noise_scale
 #
 #    # Compute bound by verify
     data_name=lidar_distance_min_"$DISTANCE_MIN"_max_"$DISTANCE_MAX"_angle_"$ANGLE_RANGE"_grid_"$grid_size"_thread_"$num_threads""$noise_mode""$noise_scale"_small
