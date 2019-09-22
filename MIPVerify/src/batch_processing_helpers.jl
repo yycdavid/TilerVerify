@@ -141,6 +141,7 @@ function create_summary_file_if_not_present_for_lidar(summary_file_path::String)
             "LogitDiff2Solved",
             "LogitDiff2Status",
             "SolveTime",
+            "Verified",
         ]
 
         open(summary_file_path, "w") do file
@@ -228,7 +229,8 @@ end
 
 function initialize_batch_solve_for_lidar_thread(
     save_path::String,
-    thread_number::Integer
+    thread_number::Integer,
+    label::Integer,
     )::Tuple{String,String,DataFrames.DataFrame}
 
     summary_file_name = "summary.csv"
@@ -238,7 +240,7 @@ function initialize_batch_solve_for_lidar_thread(
 
     dt = CSV.read(summary_file_path)
 
-    thread_summary_file_name = "summary_$(thread_number).csv"
+    thread_summary_file_name = "$(label)_summary_$(thread_number).csv"
     thread_summary_file_path = joinpath(save_path, thread_summary_file_name)
     thread_summary_file_path|> create_summary_file_if_not_present_for_lidar
     return (save_path, thread_summary_file_path, dt)
@@ -315,6 +317,7 @@ function save_to_csv_for_lidar(
         d[:MinDiff2],
         d[:MinDiff2Status],
         d[:SolveTime],
+        d[:Verified]
     ] .|> string
     open(summary_file_path, "a") do file
         writecsv(file, [summary_line])
@@ -715,7 +718,8 @@ function batch_verify_class_thread(
     nn::NeuralNet,
     dataset::MIPVerify.LidarRangeThreadDataset,
     main_solver::MathProgBase.SolverInterface.AbstractMathProgSolver,
-    thread_number::Integer;
+    thread_number::Integer,
+    label::Integer;
     save_path::String = ".",
     solve_rerun_option::MIPVerify.SolveRerunOption = MIPVerify.never,
     pp::MIPVerify.PerturbationFamily = MIPVerify.CustomPerturbationFamily(),
@@ -725,13 +729,14 @@ function batch_verify_class_thread(
 
     (main_path, thread_summary_file_path, dt) = initialize_batch_solve_for_lidar_thread(
         save_path,
-        thread_number
+        thread_number,
+        label
         )
     num_entries = MIPVerify.num_samples(dataset)
     non_optimal_entries = []
     time_spent = @elapsed begin
         #for sample_number in 1:num_entries
-        for sample_number in 1:5
+        for sample_number in 1:num_entries
             if run_on_sample_for_untargeted_attack(sample_number, dt, solve_rerun_option)
                 info(MIPVerify.LOGGER, "Working on index $(dataset.index[sample_number])")
 
@@ -766,6 +771,7 @@ function batch_verify_class_thread(
                 summary_item[:MinDiff2] = result_dict[:Results][2][:ObjectiveValue]
                 summary_item[:MinDiff2Status] = result_dict[:Results][2][:SolveStatus]
                 summary_item[:SolveTime] = result_dict[:TotalTime]
+                summary_item[:Verified] = (summary_item[:MinDiff1] > 0) & (summary_item[:MinDiff2]>0)
 
                 save_to_csv_for_lidar(dataset.index[sample_number], thread_summary_file_path, summary_item)
                 for d in result_dict[:Results]

@@ -325,7 +325,7 @@ def gen_data_for_verify_parallel(distance_min, distance_max, angle_rng, grid_siz
         print("Creating {}".format(data_dir))
         os.makedirs(data_dir)
 
-    save_dir = os.path.join(data_dir, 'lidar_distance_min_{}_max_{}_angle_{}_grid_{}_thread_{}'.format(distance_min, distance_max, angle_rng, grid_size, num_threads)+noise_mode+'{}'.format(noise_scale))
+    save_dir = os.path.join(data_dir, 'lidar_distance_min_{}_max_{}_angle_{}_grid_{}_thread_{}'.format(distance_min, distance_max, angle_rng, grid_size, num_threads)+noise_mode+'{}_small'.format(noise_scale))
     if not os.path.exists(save_dir):
         print("Creating {}".format(save_dir))
         os.makedirs(save_dir)

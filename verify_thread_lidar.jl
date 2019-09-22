@@ -31,6 +31,7 @@ MIPVerify.batch_verify_class_thread(
     test_dataset_with_range,
     GurobiSolver(Gurobi.Env(), TimeLimit=1200),
     thread_number,
+    shape,
     save_path = joinpath("data", data_name),
     pp = MIPVerify.CustomPerturbationFamily(),
     solve_rerun_option = MIPVerify.never,

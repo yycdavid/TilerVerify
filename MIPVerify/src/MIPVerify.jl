@@ -247,7 +247,7 @@ function find_range_for_outputs_diff(
             d[:ObjectiveValue] = getobjectivevalue(m)
             d[:PerturbedInputValue] = d[:PerturbedInput] |> getvalue
             d[:TargetLabel] = target_label
-            append!(results_dict[:Results], d)
+            push!(results_dict[:Results], d)
         end
     end
 

@@ -90,6 +90,8 @@ def get_args():
     parser = argparse.ArgumentParser(description='convert .pth checkpoint file from pytorch training for MIPVerify.')
     parser.add_argument('--name', help='name of experiment to convert the model parameters')
     parser.add_argument('--case', type=str, help='Case study to convert. Can be: road/lidar')
+    args = parser.parse_args()
+    return args
 
 
 def main():
