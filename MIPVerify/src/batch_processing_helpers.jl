@@ -735,8 +735,8 @@ function batch_verify_class_thread(
     num_entries = MIPVerify.num_samples(dataset)
     non_optimal_entries = []
     time_spent = @elapsed begin
-        #for sample_number in 1:num_entries
-        for sample_number in 1:10
+        for sample_number in 1:num_entries
+        #for sample_number in 1:10
             if run_on_sample_for_untargeted_attack(sample_number, dt, solve_rerun_option)
                 info(MIPVerify.LOGGER, "Working on index $(dataset.index[sample_number])")
 

@@ -20,11 +20,11 @@ ANGLE_RANGE=45
 num_threads=21
 num_threads_per_class=$(expr $num_threads / 3)
 exp_name=$RESULT_FOLDER
-for grid_size in 1.0
+for grid_size in 1.0 0.5
 do
 #    export JULIA_NUM_THREADS=$num_threads
 #    # Generate dataset for estimate and bound
-    python3 parallel_verify_lidar.py --distance_min $DISTANCE_MIN --distance_max $DISTANCE_MAX --angle_range $ANGLE_RANGE --grid_size $grid_size --num_threads $num_threads --noise $noise_mode --noise_scale $noise_scale
+    #python3 parallel_verify_lidar.py --distance_min $DISTANCE_MIN --distance_max $DISTANCE_MAX --angle_range $ANGLE_RANGE --grid_size $grid_size --num_threads $num_threads --noise $noise_mode --noise_scale $noise_scale
 #
 #    # Compute bound by verify
     data_name=lidar_distance_min_"$DISTANCE_MIN"_max_"$DISTANCE_MAX"_angle_"$ANGLE_RANGE"_grid_"$grid_size"_thread_"$num_threads""$noise_mode""$noise_scale"_small
