@@ -5,6 +5,12 @@ using MAT
 data_name = ARGS[1]
 num_threads = parse(Int64, ARGS[2])
 
+VERIFIED_TRUE = 0
+VERIFIED_FALSE = 1
+NOT_SURE = 2
+
+verify_result = Dict()
+
 main_path = joinpath("data", data_name)
 for label in 0:2
     # Collect summary files
@@ -21,19 +27,23 @@ for label in 0:2
         rm(overall_summary_path)
     end
     CSV.write(overall_summary_path, summary_dt)
+    verified = summary_dt[:Verified]
+    solve_status_1 = summary_dt[:LogitDiff1Status]
+    solve_status_2 = summary_dt[:LogitDiff2Status]
+    verify_result["VerifyStatus_$(label)"] = Int64[]
+    for i in 1:length(verified)
+        if (verified[i]==false)
+            push!(verify_result["VerifyStatus_$(label)"], VERIFIED_FALSE)
+        elseif (solve_status_1[i] != "Optimal") || (solve_status_2[i] != "Optimal")
+            push!(verify_result["VerifyStatus_$(label)"], NOT_SURE)
+        else
+            push!(verify_result["VerifyStatus_$(label)"], VERIFIED_TRUE)
+        end
+    end
 end
 
-
-
-# Get error matrix
-#offset_errors = max.(summary_dt[:OffsetMaxSolved] - summary_dt[:OffsetMin], summary_dt[:OffsetMax] - #summary_dt[:OffsetMinSolved])
-#angle_errors = max.(summary_dt[:AngleMaxSolved] - summary_dt[:AngleMin], summary_dt[:AngleMax] - summary_dt[:AngleMinSolved])
-#error_result = Dict()
-#error_result["offset_errors"] = offset_errors
-#error_result["angle_errors"] = angle_errors
-#
-#info_path = joinpath(main_path, "info.mat")
-#info = matread(info_path)
-#error_result["offset_grid_num"] = info["offset_grid_num"]
-#error_result["angle_grid_num"] = info["angle_grid_num"]
-#matwrite(joinpath(main_path, "error_bound_result.mat"), error_result)
+info_path = joinpath(main_path, "info.mat")
+info = matread(info_path)
+verify_result["distance_grid_num"] = info["distance_grid_num"]
+verify_result["angle_grid_num"] = info["angle_grid_num"]
+matwrite(joinpath(main_path, "verify_result.mat"), verify_result)

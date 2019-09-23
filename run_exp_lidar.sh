@@ -20,7 +20,7 @@ ANGLE_RANGE=45
 num_threads=21
 num_threads_per_class=$(expr $num_threads / 3)
 exp_name=$RESULT_FOLDER
-for grid_size in 1.0 0.5
+for grid_size in 0.5
 do
 #    export JULIA_NUM_THREADS=$num_threads
 #    # Generate dataset for estimate and bound
@@ -28,22 +28,22 @@ do
 #
 #    # Compute bound by verify
     data_name=lidar_distance_min_"$DISTANCE_MIN"_max_"$DISTANCE_MAX"_angle_"$ANGLE_RANGE"_grid_"$grid_size"_thread_"$num_threads""$noise_mode""$noise_scale"_small
-    for shape in 0 1 2
-    #for shape in 0
-    do
-        for thread_number in $(seq 0 $(expr $num_threads_per_class - 1))
-        #for thread_number in 1
-        do
-            /raid/yicheny/software/julia-9d11f62bcb/bin/julia verify_thread_lidar.jl $exp_name $data_name $shape $thread_number &
-            sleep .5
-        done
-    done
-    wait
-    #/raid/yicheny/software/julia-9d11f62bcb/bin/julia thread_collect_lidar.jl $data_name $num_threads_per_class
+    #for shape in 0 1 2
+    ##for shape in 0
+    #do
+    #    for thread_number in $(seq 0 $(expr $num_threads_per_class - 1))
+    #    #for thread_number in 1
+    #    do
+    #        /raid/yicheny/software/julia-9d11f62bcb/bin/julia verify_thread_lidar.jl $exp_name $data_name $shape #$thread_number &
+    #        sleep .5
+    #    done
+    #done
+    #wait
+    /raid/yicheny/software/julia-9d11f62bcb/bin/julia thread_collect_lidar.jl $data_name $num_threads_per_class
     # Compute estimate
     #python3 generate_data.py --mode estimate --offset_range $OFFSET_RANGE --angle_range $ANGLE_RANGE --grid_size $grid_size #--arget_dir_name $data_name --noise $noise_mode --noise_scale $noise_scale
     #python3 trainer/error_estimate.py --exp_name $exp_name --target_dir_name $data_name --grid_size $grid_size
     # Get heatmap
-    #python3 analysis/heatmap.py --result_dir data/"$data_name" --offset_range $OFFSET_RANGE --angle_range $ANGLE_RANGE
+    python3 analysis/heatmap_lidar.py --result_dir data/"$data_name" --distance_min $DISTANCE_MIN --distance_max $DISTANCE_MAX --angle_range $ANGLE_RANGE
     #python3 analysis/statistics.py --result_dir data/"$data_name"
 done

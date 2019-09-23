@@ -15,10 +15,13 @@ import sys
 base_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 if not base_dir in sys.path:
     sys.path.append(base_dir)
+sys.path.append(os.path.join(base_dir, 'trainer'))
 from generate_data import get_viewer, get_new_viewer
+import utils
 
 from trainer.dataset import RoadSceneDataset
 
+outputManager = 0
 
 class Flatten(nn.Module):
     def forward(self, x):
@@ -79,13 +82,13 @@ def get_bounding_boxes(file_name, mode):
     data_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))), 'data')
     file_path = os.path.join(data_dir, file_name)
     if os.path.isfile(file_path):
-        print("Loading bounding boxes...")
+        outputManager.say("Loading bounding boxes...")
         with open(file_path, 'rb') as f:
             bounding_boxes = pickle.load(f)
         with open(os.path.join(data_dir, 'ground_truth_bounds.mat'), 'rb') as f:
             ground_truth_bounds = pickle.load(f)
     else:
-        print("Creating bounding boxes...")
+        outputManager.say("Creating bounding boxes...")
         bounding_boxes = {}
         '''
         viewer = get_viewer()
@@ -110,12 +113,16 @@ def get_bounding_boxes(file_name, mode):
     return bounding_boxes['lower_bounds'], bounding_boxes['upper_bounds'], ground_truth_bounds['offset_lower_bounds'], ground_truth_bounds['angle_lower_bounds']
 
 
-def get_input_image():
-    viewer = get_viewer()
-    #viewer = get_viewer(noise_mode='uniform', noise_scale=0.1)
+def get_input_image(mode):
+    if mode == 'in':
+        viewer = get_viewer()
+    elif mode == 'noise':
+        viewer = get_viewer(noise_mode='uniform', noise_scale=0.1)
+    else:
+        viewer = get_new_viewer()
     offset = np.random.uniform(low=-40.0, high=40.0)
     angle = np.random.uniform(low=-60.0, high=60.0)
-    print("Example image offset: {}, angle: {}".format(offset, angle))
+    #outputManager.say("Example image offset: {}, angle: {}".format(offset, angle))
     example_image = viewer.take_picture(offset, angle)
     return example_image, offset, angle
 
@@ -146,14 +153,14 @@ class InputDetector(object):
         return np.any(np.logical_and(np.all(self.lower_bounds[indices] <= input_image, axis=1), np.all(input_image <= self.upper_bounds[indices], axis=1)))
 
 
-def prepare_test_dataset(num_images):
+def prepare_test_dataset(num_images, mode='in'):
     # Get an input image
-    print('Get example images...')
+    outputManager.say('Get example images...')
     example_images = []
     offsets = []
     angles = []
     for i in range(num_images):
-        example_image, offset, angle = get_input_image()
+        example_image, offset, angle = get_input_image(mode)
         example_images.append(np.expand_dims(example_image, axis=0))
         offsets.append(offset)
         angles.append(angle)
@@ -207,12 +214,13 @@ def get_predictions(model, test_loader, device):
 def main():
     parser = argparse.ArgumentParser(description='Detecting whether input is legal or not')
     parser.add_argument('--file_name', type=str, help='File path to bounding boxes')
-    parser.add_argument('--mode', type=str, help='can be naive')
     args = parser.parse_args()
 
+    result_dir = os.path.dirname(os.path.realpath(__file__))
+    global outputManager
+    outputManager = utils.OutputManager(result_dir)
     # Load bounding boxes
-    if args.mode == 'naive':
-        lower_bounds, upper_bounds, offset_lower_bounds, angle_lower_bounds = get_bounding_boxes(args.file_name, 'naive')
+    lower_bounds, upper_bounds, offset_lower_bounds, angle_lower_bounds = get_bounding_boxes(args.file_name, 'naive')
 
     offset_grid_size = angle_grid_size = 0.2
     offset_error_bound = 11.058546699918972
@@ -220,61 +228,57 @@ def main():
 
     input_detector = InputDetector(lower_bounds, upper_bounds, offset_lower_bounds, angle_lower_bounds, offset_grid_size, angle_grid_size, offset_error_bound, angle_error_bound)
 
+
     # Prepare dataset for test
-    num_images = 1000
-    test_dataset, example_images = prepare_test_dataset(num_images)
-    test_loader = torch.utils.data.DataLoader(
-        test_dataset,
-        batch_size=1, shuffle=False)
+    for mode in ['in', 'noise', 'out']:
+        outputManager.say("Testing mode " + mode + " start:")
+        num_images = 1000
+        test_dataset, example_images = prepare_test_dataset(num_images, mode)
+        test_loader = torch.utils.data.DataLoader(
+            test_dataset,
+            batch_size=1, shuffle=False)
 
-    # Get network predictions
-    device = torch.device("cpu")
-    torch.set_num_threads(1)
-    nn_model = load_trained_nn()
-    print("Start predicting...")
-    start_t = time.time()
-    offset_preds, angle_preds = get_predictions(nn_model, test_loader, device)
-    end_t = time.time()
-    print('Time spent per input in inference: {}'.format((end_t - start_t)/num_images))
+        # Get network predictions
+        device = torch.device("cpu")
+        torch.set_num_threads(1)
+        nn_model = load_trained_nn()
+        outputManager.say("Start predicting...")
+        true_count = 0
+        start_t = time.time()
+        offset_preds, angle_preds = get_predictions(nn_model, test_loader, device)
+        # To make running time comparison fair
+        for i in range(num_images):
+            true_count += 1
+        end_t = time.time()
+        outputManager.say('Time spent per input in inference: {}'.format((end_t - start_t)/num_images))
 
-    '''# Decide if it's in any of the bounding box, naive method
-    print("Start detecting...")
-    start_t = time.time()
-    for i in range(num_images):
-        example_image = example_images[i]
-        #is_legel = np.any(np.logical_and(np.all(lower_bounds <= input_image, axis=1), np.all(input_image <= upper_bounds, axis=1)))
-        is_legal = input_detector.detect_input(example_image)
-        print(is_legal)
+        # Decide if it's in any of the bounding box, naive method
+        outputManager.say("Start detecting (naive)...")
+        true_count = 0
+        start_t = time.time()
+        for i in range(num_images):
+            is_legal = input_detector.detect_input(example_images[i])
+            true_count += is_legal
+        end_t = time.time()
+        outputManager.say('Time spent per input (naive): {}'.format((end_t - start_t)/num_images))
+        outputManager.say('{} out of {} detected as legal'.format(true_count, num_images))
 
-    end_t = time.time()
-    print('Time spent per input (naive): {}'.format((end_t - start_t)/num_images))'''
+        # Decide if it's in any of the bounding box, guided search
+        outputManager.say("Start detecting (guided)...")
+        true_count = 0
+        start_t = time.time()
+        for i in range(num_images):
+            is_legal = input_detector.detect_input_with_prediction(example_image[i], offset_preds[i], angle_preds[i])
+        end_t = time.time()
+        outputManager.say('Time spent per input (guided): {}'.format((end_t - start_t)/num_images))
+        outputManager.say('{} out of {} detected as legal'.format(true_count, num_images))
 
-    # Decide if it's in any of the bounding box, guided search
-    print("Start detecting...")
-    start_t = time.time()
-    for i in range(num_images):
-        example_image = example_images[i]
-        is_legal = input_detector.detect_input_with_prediction(example_image, offset_preds[i], angle_preds[i])
-        print(is_legal)
-
-    end_t = time.time()
-    print('Time spent per input (guided): {}'.format((end_t - start_t)/num_images))
-
-
-def main_test():
-    viewer = get_new_viewer()
-    offset = 10.0
-    angle = 0.0
-    print("Example image offset: {}, angle: {}".format(offset, angle))
-    example_image = viewer.take_picture(offset, angle)
-    img = Image.fromarray(example_image)
-    img = img.convert("L")
-    img.save('test_new.jpg')
 
 if __name__ == '__main__':
     try:
-        main_test()
+        main()
     except Exception as err:
         print(err)
         import pdb
         pdb.post_mortem()
+                                                                                                                                                                                                                                                                                                                                      
