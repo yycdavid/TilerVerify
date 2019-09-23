@@ -232,7 +232,7 @@ def main():
     # Prepare dataset for test
     for mode in ['in', 'noise', 'out']:
         outputManager.say("Testing mode " + mode + " start:")
-        num_images = 1000
+        num_images = 500
         test_dataset, example_images = prepare_test_dataset(num_images, mode)
         test_loader = torch.utils.data.DataLoader(
             test_dataset,
@@ -268,7 +268,7 @@ def main():
         true_count = 0
         start_t = time.time()
         for i in range(num_images):
-            is_legal = input_detector.detect_input_with_prediction(example_image[i], offset_preds[i], angle_preds[i])
+            is_legal = input_detector.detect_input_with_prediction(example_images[i], offset_preds[i], angle_preds[i])
         end_t = time.time()
         outputManager.say('Time spent per input (guided): {}'.format((end_t - start_t)/num_images))
         outputManager.say('{} out of {} detected as legal'.format(true_count, num_images))

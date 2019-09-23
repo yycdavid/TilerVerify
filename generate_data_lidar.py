@@ -58,96 +58,6 @@ def generate_partial_train_dataset(shape, noise_mode, noise_scale, num_images, d
     return dataset
 
 
-def generate_dataset_for_error_est(sensor, distance_range, angle_range, distance_grid_num, angle_grid_num, num_points_per_side):
-    # distance_range and angle_range are list, [low, high]
-    # returned dataset has order: innermost is within a grid, then varying angle, then varying distance
-    distances = []
-    angles = []
-    images = []
-    distance_grid_size = (distance_range[1] - distance_range[0])/distance_grid_num
-    angle_grid_size = (angle_range[1] - angle_range[0])/angle_grid_num
-    distance_point_space = distance_grid_size / num_points_per_side
-    angle_point_space = angle_grid_size / num_points_per_side
-    for i in tqdm(range(distance_grid_num)):
-        distance_start = distance_range[0] + i * distance_grid_size
-        for j in range(angle_grid_num):
-            angle_start = angle_range[0] + j * angle_grid_size
-            for p in range(num_points_per_side):
-                distance = distance_start + p * distance_point_space + distance_point_space/2
-                for q in range(num_points_per_side):
-                    angle = angle_start + q * angle_point_space + angle_point_space/2
-                    images.append(np.expand_dims(sensor.take_picture(distance, angle), axis=0))
-                    distances.append(distance)
-                    angles.append(angle)
-    dataset = {}
-    dataset['images'] = np.concatenate(images, axis=0) # (N, H, W)
-    dataset['distances'] = np.array(distances) # (N,)
-    dataset['angles'] = np.array(angles) # (N,)
-    dataset['points_per_grid'] = num_points_per_side * num_points_per_side
-    dataset['distance_grid_num'] = distance_grid_num
-    dataset['angle_grid_num'] = angle_grid_num
-    return dataset
-
-def generate_dataset_for_error_est_parallel(sensor, distance_range, angle_range, distance_grid_num, angle_grid_num, num_points_per_side):
-    # distance_range and angle_range are list, [low, high]
-    # returned dataset has order: innermost is within a grid, then varying angle, then varying distance
-    num_threads = 30
-    N = distance_grid_num * angle_grid_num * num_points_per_side * num_points_per_side
-    n_per_core = N//num_threads +1
-    range_list = [(i*n_per_core, min((i+1)*n_per_core, N)) for i in range(num_threads)]
-    pool = mp.Pool(processes=num_threads)
-    results = [pool.apply_async(generate_partial_est_dataset, args=(distance_range, angle_range, distance_grid_num, angle_grid_num, num_points_per_side, index_range)) for index_range in range_list]
-    sub_datasets = []
-    for i in range(num_threads):
-        sub_datasets.append(results[i].get())
-    for i in range(1, num_threads):
-        assert sub_datasets[i]['index'][0] > sub_datasets[i-1]['index'][0], "Result is out of order"
-
-    dataset = {}
-    dataset['images'] = np.concatenate([sub_datasets[i]['images'] for i in range(num_threads)], axis=0)
-    dataset['distances'] = np.concatenate([sub_datasets[i]['distances'] for i in range(num_threads)])
-    dataset['angles'] = np.concatenate([sub_datasets[i]['angles'] for i in range(num_threads)])
-    dataset['points_per_grid'] = num_points_per_side * num_points_per_side
-    dataset['distance_grid_num'] = distance_grid_num
-    dataset['angle_grid_num'] = angle_grid_num
-    return dataset
-
-def generate_partial_est_dataset(distance_range, angle_range, distance_grid_num, angle_grid_num, num_points_per_side, index_range):
-    # distance_range and angle_range are list, [low, high]
-    distance_grid_size = (distance_range[1] - distance_range[0])/distance_grid_num
-    angle_grid_size = (angle_range[1] - angle_range[0])/angle_grid_num
-    distance_point_space = distance_grid_size / num_points_per_side
-    angle_point_space = angle_grid_size / num_points_per_side
-    points_per_grid = num_points_per_side * num_points_per_side
-    images = []
-    distances = []
-    angles = []
-    start = index_range[0]
-    finish = index_range[1]
-    sub_dataset = {}
-    sub_dataset['index'] = np.array(range(start, finish))
-    sensor = get_sensor()
-    for index in tqdm(range(start, finish)):
-        index_ij = index // points_per_grid
-        index_pq = index % points_per_grid
-        p = index_pq // num_points_per_side
-        q = index_pq % num_points_per_side
-        i = index_ij // angle_grid_num
-        j = index_ij % angle_grid_num
-        distance = distance_range[0] + i * distance_grid_size + p * distance_point_space + distance_point_space/2
-        angle = angle_range[0] + j * angle_grid_size + q * angle_point_space + angle_point_space/2
-        images.append(np.expand_dims(sensor.take_picture(distance, angle), axis=0))
-        distances.append(distance)
-        angles.append(angle)
-
-    sub_dataset['images'] = np.concatenate(images, axis=0) # (N, H, W)
-    sub_dataset['distances'] = np.array(distances) # (N,)
-    sub_dataset['angles'] = np.array(angles) # (N,)
-
-    return sub_dataset
-
-
-
 def gen_train_valid_data(distance_min_train, distance_max_train, angle_range_train, distance_min_valid, distance_max_valid, angle_range_valid, noise_mode, noise_scale, target_dir_name):
     num_threads = 20
     # Generate training data
@@ -195,20 +105,6 @@ def gen_train_valid_data(distance_min_train, distance_max_train, angle_range_tra
         pickle.dump(validation_set, f, protocol=pickle.HIGHEST_PROTOCOL)
 
 
-def gen_test_data_for_error_est(sensor, range, grid_size):
-    # Generate a test set for error estimation
-    distance_range = [-range, range]
-    angle_range = [-range, range]
-    distance_grid_num = int(2*range/grid_size)
-    angle_grid_num = int(2*range/grid_size)
-    num_points_per_side = math.ceil(grid_size/0.1)
-    dataset = generate_dataset_for_error_est(sensor, distance_range, angle_range, distance_grid_num, angle_grid_num, num_points_per_side)
-    data_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'data')
-    if not os.path.exists(data_dir):
-        print("Creating {}".format(data_dir))
-        os.makedirs(data_dir)
-    sio.savemat(os.path.join(data_dir, 'test_error_est_{}_{}.mat'.format(range, grid_size)), dataset)
-
 def gen_example_picture(sensor):
     # Generate a picture
     distance = 10.0
@@ -218,6 +114,7 @@ def gen_example_picture(sensor):
     img = Image.fromarray(image_taken)
     img = img.convert("L")
     img.save('32_distance_{}_angle_{}.pdf'.format(distance, angle))
+
 
 def gen_example_picture_with_range(sensor):
     # Generate a picture with range
@@ -365,31 +262,6 @@ def gen_data_for_verify_parallel(distance_min, distance_max, angle_rng, grid_siz
         for shape in Shape:
             for i in range(num_threads_per_class):
                 retval = results[shape][i].get()
-
-def gen_data_for_estimate(distance_rng, angle_rng, grid_size, target_dir_name, noise_mode='none', noise_scale=0.0):
-    data_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'data')
-    if not os.path.exists(data_dir):
-        print("Creating {}".format(data_dir))
-        os.makedirs(data_dir)
-
-    save_dir = os.path.join(data_dir, target_dir_name)
-    if not os.path.exists(save_dir):
-        print("Creating {}".format(save_dir))
-        os.makedirs(save_dir)
-
-    # Generate a test set for error estimation
-    distance_range = [-distance_rng, distance_rng]
-    angle_range = [-angle_rng, angle_rng]
-    distance_grid_num = int(2*distance_rng/grid_size)
-    angle_grid_num = int(2*angle_rng/grid_size)
-    num_points_per_side = math.ceil(grid_size/0.05)
-    sensor = get_sensor(noise_mode, noise_scale)
-    dataset = generate_dataset_for_error_est_parallel(sensor, distance_range, angle_range, distance_grid_num, angle_grid_num, num_points_per_side)
-
-    with open(os.path.join(save_dir, 'error_estimate_data.pickle'), 'wb') as f:
-        pickle.dump(dataset, f, protocol=pickle.HIGHEST_PROTOCOL)
-
-
 
 
 def main():
