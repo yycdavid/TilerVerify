@@ -194,7 +194,12 @@ def get_viewer(noise_mode='none', noise_scale=0.0):
 
 
 def get_new_viewer(noise_mode='none', noise_scale=0.0):
-    scene = image_generator.NewScene(scene_params)
+    new_scene_params = {
+    'line_width': 4.0,
+    'road_width': 60.0, # per lane
+    'shade_width': 1.0,
+    }
+    scene = image_generator.NewScene(new_scene_params)
     viewer = image_generator.Viewer(camera_params, scene, noise_mode, noise_scale)
     return viewer
 

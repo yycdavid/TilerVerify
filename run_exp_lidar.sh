@@ -38,7 +38,7 @@ do
     #    done
     #done
     #wait
-    /raid/yicheny/software/julia-9d11f62bcb/bin/julia thread_collect_lidar.jl $data_name $num_threads_per_class
+    #/raid/yicheny/software/julia-9d11f62bcb/bin/julia thread_collect_lidar.jl $data_name $num_threads_per_class
     # Get heatmap
     python3 analysis/heatmap_lidar.py --result_dir data/"$data_name" --distance_min $DISTANCE_MIN --distance_max $DISTANCE_MAX --angle_range $ANGLE_RANGE
     #python3 analysis/statistics.py --result_dir data/"$data_name"

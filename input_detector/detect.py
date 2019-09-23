@@ -269,6 +269,7 @@ def main():
         start_t = time.time()
         for i in range(num_images):
             is_legal = input_detector.detect_input_with_prediction(example_images[i], offset_preds[i], angle_preds[i])
+            true_count += is_legal
         end_t = time.time()
         outputManager.say('Time spent per input (guided): {}'.format((end_t - start_t)/num_images))
         outputManager.say('{} out of {} detected as legal'.format(true_count, num_images))
