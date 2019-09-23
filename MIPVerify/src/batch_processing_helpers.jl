@@ -797,10 +797,11 @@ function batch_verify_class_thread(
     return nothing
 end
 
+
 function find_adversarial_example_lidar(
     nn::NeuralNet,
     dataset::MIPVerify.LidarRangeThreadDataset,
-    main_solver::MathProgBase.SolverInterface.AbstractMathProgSolver,
+    main_solver::MathProgBase.SolverInterface.AbstractMathProgSolver;
     save_path::String = ".",
     solve_rerun_option::MIPVerify.SolveRerunOption = MIPVerify.never,
     pp::MIPVerify.PerturbationFamily = MIPVerify.CustomPerturbationFamily(),
@@ -858,6 +859,7 @@ function find_adversarial_example_lidar(
                 push!(results[:logitDiff], result_dict[:Results][2][:ObjectiveValue])
             else
                 println("Something wrong, this box is actually verified.")
+            end
         end
     end
 

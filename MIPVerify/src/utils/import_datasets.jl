@@ -409,7 +409,7 @@ function read_lidar_dataset_target(relative_path::String)::LidarRangeThreadDatas
     test_data["image_lower_bounds"] = reshape(test_data["image_lower_bounds"], (size(test_data["image_lower_bounds"])...,1)) #(N,H,W,C)
     test_data["image_upper_bounds"] = reshape(test_data["image_upper_bounds"], (size(test_data["image_upper_bounds"])...,1)) #(N,H,W,C)
 
-    indices = 1:length(test_data["labels"][:])
+    indices = Array(1:length(test_data["labels"][:]))
 
     return LidarRangeThreadDataset(test_data["image_lower_bounds"], test_data["image_upper_bounds"], test_data["distance_lower_bounds"][:], test_data["distance_upper_bounds"][:], test_data["angle_lower_bounds"][:], test_data["angle_upper_bounds"][:], test_data["labels"][:], indices)
 end
