@@ -2,7 +2,7 @@ using MAT
 using PyCall
 @pyimport pickle
 
-export read_datasets, read_custom_test_dataset, read_lidar_test_dataset, read_custom_dataset_with_range, read_custom_dataset_thread, read_lidar_dataset_thread
+export read_datasets, read_custom_test_dataset, read_lidar_test_dataset, read_custom_dataset_with_range, read_custom_dataset_thread, read_lidar_dataset_thread, read_lidar_dataset_target
 
 abstract type Dataset end
 
@@ -400,4 +400,16 @@ function read_lidar_dataset_thread(relative_path::String, label::Integer)::Lidar
     labels = repeat([label],inner=length(test_data["index"][:]))
 
     return LidarRangeThreadDataset(test_data["image_lower_bounds"], test_data["image_upper_bounds"], test_data["distance_lower_bounds"][:], test_data["distance_upper_bounds"][:], test_data["angle_lower_bounds"][:], test_data["angle_upper_bounds"][:], labels, test_data["index"][:])
+end
+
+function read_lidar_dataset_target(relative_path::String)::LidarRangeThreadDataset
+    absolute_path = joinpath(root_path, relative_path)
+    test_data = matread(absolute_path)
+    # Add channel dimension
+    test_data["image_lower_bounds"] = reshape(test_data["image_lower_bounds"], (size(test_data["image_lower_bounds"])...,1)) #(N,H,W,C)
+    test_data["image_upper_bounds"] = reshape(test_data["image_upper_bounds"], (size(test_data["image_upper_bounds"])...,1)) #(N,H,W,C)
+
+    indices = 1:length(test_data["labels"][:])
+
+    return LidarRangeThreadDataset(test_data["image_lower_bounds"], test_data["image_upper_bounds"], test_data["distance_lower_bounds"][:], test_data["distance_upper_bounds"][:], test_data["angle_lower_bounds"][:], test_data["angle_upper_bounds"][:], test_data["labels"][:], indices)
 end

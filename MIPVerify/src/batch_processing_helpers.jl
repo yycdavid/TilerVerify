@@ -1,4 +1,4 @@
-export batch_find_untargeted_attack, batch_find_error_bound, batch_find_error_bound_thread, batch_verify_class_thread
+export batch_find_untargeted_attack, batch_find_error_bound, batch_find_error_bound_thread, batch_verify_class_thread, find_adversarial_example_lidar
 
 @enum SolveRerunOption never=1 always=2 resolve_ambiguous_cases=3 refine_insecure_cases=4 retarget_infeasible_cases=5
 
@@ -794,5 +794,74 @@ function batch_verify_class_thread(
     io = open(joinpath(save_path, "time.txt"), "a")
     write(io, "Time for this thread is $(time_spent)")
     close(io)
+    return nothing
+end
+
+function find_adversarial_example_lidar(
+    nn::NeuralNet,
+    dataset::MIPVerify.LidarRangeThreadDataset,
+    main_solver::MathProgBase.SolverInterface.AbstractMathProgSolver,
+    save_path::String = ".",
+    solve_rerun_option::MIPVerify.SolveRerunOption = MIPVerify.never,
+    pp::MIPVerify.PerturbationFamily = MIPVerify.CustomPerturbationFamily(),
+    tightening_algorithm::MIPVerify.TighteningAlgorithm = DEFAULT_TIGHTENING_ALGORITHM,
+    tightening_solver::MathProgBase.SolverInterface.AbstractMathProgSolver = MIPVerify.get_default_tightening_solver(main_solver),
+    )::Void
+
+
+    num_entries = MIPVerify.num_samples(dataset)
+    results = Dict()
+    results[:label] = Int64[]
+    results[:targetLabel] = Int64[]
+    results[:distanceMin] = Float64[]
+    results[:distanceMax] = Float64[]
+    results[:angleMin] = Float64[]
+    results[:angleMax] = Float64[]
+    results[:perturbedInput] = Array{Array{Float64, 4}, 1}()
+    results[:logitDiff] = Float64[]
+    time_spent = @elapsed begin
+        for sample_number in 1:num_entries
+            info(MIPVerify.LOGGER, "Working on index $(dataset.index[sample_number])")
+
+            input_lower_bound = dataset.image_lower_bounds[sample_number:sample_number,:,:,:]
+            input_upper_bound = dataset.image_upper_bounds[sample_number:sample_number,:,:,:]
+            distance_low = dataset.distance_lower_bounds[sample_number]
+            distance_high = dataset.distance_upper_bounds[sample_number]
+            angle_low = dataset.angle_lower_bounds[sample_number]
+            angle_high = dataset.angle_upper_bounds[sample_number]
+            label = dataset.labels[sample_number]
+            summary_item = Dict()
+            push!(results[:label], label)
+            push!(results[:distanceMin], distance_low)
+            push!(results[:distanceMax], distance_high)
+            push!(results[:angleMin], angle_low)
+            push!(results[:angleMax], angle_high)
+
+            result_dict = MIPVerify.find_range_for_outputs_diff(
+                nn,
+                input_lower_bound,
+                input_upper_bound,
+                label,
+                main_solver,
+                pp = pp,
+                tightening_algorithm = tightening_algorithm,
+                tightening_solver = tightening_solver,
+            )
+
+            if result_dict[:Results][1][:ObjectiveValue] < 0
+                push!(results[:targetLabel], result_dict[:Results][1][:TargetLabel])
+                push!(results[:perturbedInput], result_dict[:Results][1][:PerturbedInputValue])
+                push!(results[:logitDiff], result_dict[:Results][1][:ObjectiveValue])
+            elseif result_dict[:Results][2][:ObjectiveValue] < 0
+                push!(results[:targetLabel], result_dict[:Results][2][:TargetLabel])
+                push!(results[:perturbedInput], result_dict[:Results][2][:PerturbedInputValue])
+                push!(results[:logitDiff], result_dict[:Results][2][:ObjectiveValue])
+            else
+                println("Something wrong, this box is actually verified.")
+        end
+    end
+
+    matwrite(joinpath(save_path, "adv_inputs.mat"), results)
+
     return nothing
 end
