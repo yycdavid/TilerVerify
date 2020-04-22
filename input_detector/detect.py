@@ -211,6 +211,53 @@ def get_predictions(model, test_loader, device):
     return offset_preds, angle_preds
 
 
+def get_example_images():
+    viewer = get_viewer()
+    offset = -10.0
+    angle = 10.0
+    example_image = viewer.take_picture(offset, angle)
+    img = Image.fromarray(example_image)
+    img = img.convert("L")
+    img.save('in1.pdf')
+
+    offset = 10.0
+    angle = 0.0
+    example_image = viewer.take_picture(offset, angle)
+    img = Image.fromarray(example_image)
+    img = img.convert("L")
+    img.save('in2.pdf')
+
+    viewer = get_viewer(noise_mode='uniform', noise_scale=0.2)
+    offset = -20.0
+    angle = 10.0
+    example_image = viewer.take_picture(offset, angle)
+    img = Image.fromarray(example_image)
+    img = img.convert("L")
+    img.save('noise1.pdf')
+
+    offset = 0.0
+    angle = -10.0
+    example_image = viewer.take_picture(offset, angle)
+    img = Image.fromarray(example_image)
+    img = img.convert("L")
+    img.save('noise2.pdf')
+
+    viewer = get_new_viewer()
+    offset = 0.0
+    angle = 0.0
+    example_image = viewer.take_picture(offset, angle)
+    img = Image.fromarray(example_image)
+    img = img.convert("L")
+    img.save('new1.pdf')
+
+    offset = 20.0
+    angle = -20.0
+    example_image = viewer.take_picture(offset, angle)
+    img = Image.fromarray(example_image)
+    img = img.convert("L")
+    img.save('new2.pdf')
+
+
 def main():
     parser = argparse.ArgumentParser(description='Detecting whether input is legal or not')
     parser.add_argument('--file_name', type=str, help='File path to bounding boxes')
@@ -277,7 +324,7 @@ def main():
 
 if __name__ == '__main__':
     try:
-        main()
+        get_example_images()
     except Exception as err:
         print(err)
         import pdb

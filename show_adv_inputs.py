@@ -16,7 +16,7 @@ def show_adv_inputs_images(adv_input, label, target_label, angle_max, angle_min,
     plt.imshow(np.transpose(np.squeeze(adv_input)), cmap='rainbow_r')
     cb = plt.colorbar(extend='max')
     plt.axis('off')
-    save_path = os.path.join(save_dir, 'label_{}_to_{}_angle_{:.3f}_{:.3f}_dist_{:.3f}_{:.3f}_diff_{:.1f}.jpg'.format(label, target_label, angle_min, angle_max, distance_min, distance_max, logit_diff))
+    save_path = os.path.join(save_dir, 'label_{}_to_{}_angle_{:.3f}_{:.3f}_dist_{:.3f}_{:.3f}_diff_{:.1f}.pdf'.format(label, target_label, angle_min, angle_max, distance_min, distance_max, logit_diff))
     plt.savefig(save_path, bbox_inches='tight')
 
 
@@ -35,6 +35,7 @@ def main():
         perturbedInputs = [f[obj_ref].value for obj_ref in verify_result['perturbedInput']]
         verify_result['perturbedInput'] = perturbedInputs
 
+    plt.rcParams.update({'font.size': 20})
     # Plot adversarial inputs
     for i in range(len(verify_result['label'])):
         show_adv_inputs_images(verify_result['perturbedInput'][i], verify_result['label'][i], verify_result['targetLabel'][i], verify_result['angleMax'][i], verify_result['angleMin'][i], verify_result['distanceMax'][i], verify_result['distanceMin'][i], verify_result['logitDiff'][i], adv_dir)

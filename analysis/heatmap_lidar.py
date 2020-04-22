@@ -109,6 +109,7 @@ def main():
         print("Creating {}".format(plots_dir))
         os.makedirs(plots_dir)
 
+    plt.rcParams.update({'font.size': 20})
     for label in range(3):
         verify_matrix = np.reshape(verify_result['VerifyStatus_'+str(label)], (angle_grid_num, distance_grid_num))
         plot_heat_map(verify_matrix, label, args.distance_min, args.distance_max, args.angle_range, plots_dir)
