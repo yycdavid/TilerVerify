@@ -19,6 +19,13 @@ data_name=verify_offset_3_angle_3_grid_0.4_thread_5none0.05
 offset_err_thresh=3.0
 angle_err_thresh=3.0
 
-/data/scratch/yicheny/software/julia-9d11f62bcb/bin/julia thread_collect_adaptive.jl $data_name $num_threads $offset_err_thresh $angle_err_thresh
+#/data/scratch/yicheny/software/julia-9d11f62bcb/bin/julia thread_collect_adaptive.jl $data_name $num_threads $offset_err_thresh $angle_err_thresh
+
+# offset_min_size, angle_min_size: don't divide anymore once size smaller than these
+level=1
+next_folder=$data_name/"$level"
+OFFSET_MIN_SIZE=0.06
+ANGLE_MIN_SIZE=0.06
+python parallel_verify_adaptive.py --read_from_folder $data_name --write_to_folder $next_folder --num_threads $num_threads --offset_min_size $OFFSET_MIN_SIZE --angle_min_size $ANGLE_MIN_SIZE
 
 # Set timeout=5

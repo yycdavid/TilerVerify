@@ -8,6 +8,8 @@ import scipy.io as sio
 import argparse
 import math
 import multiprocessing as mp
+import csv
+
 
 # 1 Unit = 5 centimeters
 scene_params = {
@@ -216,6 +218,56 @@ def partial_dataset(dataset, index_range):
 
     return sub_dataset
 
+
+def generate_box_from_list(centers, offset_delta, angle_delta, index_range, thread_num, write_to_folder, noise_mode, noise_scale):
+    start = index_range[0]
+    finish = index_range[1]
+    if finish - start < 1:
+        return True
+
+    image_lower_bounds = []
+    image_upper_bounds = []
+    offset_lower_bounds = []
+    offset_upper_bounds = []
+    angle_lower_bounds = []
+    angle_upper_bounds = []
+    images = []
+    offsets = []
+    angles = []
+    start = index_range[0]
+    finish = index_range[1]
+    sub_dataset = {}
+    sub_dataset['index'] = np.array(range(start, finish))
+    viewer = get_viewer(noise_mode, noise_scale)
+    for index in tqdm(range(start, finish)):
+        offset = centers[index][0]
+        angle = centers[index][1]
+        image, lower_bound_matrix, upper_bound_matrix = viewer.take_picture_with_range(offset, angle, offset_delta, angle_delta)
+        image_lower_bounds.append(np.expand_dims(lower_bound_matrix, axis=0))
+        image_upper_bounds.append(np.expand_dims(upper_bound_matrix, axis=0))
+        images.append(np.expand_dims(image, axis=0))
+        offset_lower_bounds.append(offset - offset_delta)
+        offset_upper_bounds.append(offset + offset_delta)
+        offsets.append(offset)
+        angle_lower_bounds.append(angle - angle_delta)
+        angle_upper_bounds.append(angle + angle_delta)
+        angles.append(angle)
+
+    sub_dataset['image_lower_bounds'] = np.concatenate(image_lower_bounds, axis=0) # (N, H, W)
+    sub_dataset['image_upper_bounds'] = np.concatenate(image_upper_bounds, axis=0) # (N, H, W)
+    sub_dataset['offset_lower_bounds'] = np.array(offset_lower_bounds) # (N,)
+    sub_dataset['offset_upper_bounds'] = np.array(offset_upper_bounds) # (N,)
+    sub_dataset['angle_lower_bounds'] = np.array(angle_lower_bounds) # (N,)
+    sub_dataset['angle_upper_bounds'] = np.array(angle_upper_bounds) # (N,)
+    sub_dataset['images'] = np.concatenate(images, axis=0) # (N, H, W)
+    sub_dataset['offsets'] = np.array(offsets) # (N,)
+    sub_dataset['angles'] = np.array(angles) # (N,)
+
+    sio.savemat(os.path.join(write_to_folder, 'thread_{}.mat'.format(thread_num)), sub_dataset)
+
+    return True
+
+
 def generate_partial_dataset(offset_range, angle_range, offset_grid_num, angle_grid_num, index_range, thread_num, save_dir, noise_mode, noise_scale):
     # offset_range and angle_range are list, [low, high]
     offset_grid_size = (offset_range[1] - offset_range[0])/offset_grid_num
@@ -304,6 +356,85 @@ def gen_data_for_verify_parallel(offset_rng, angle_rng, grid_size, num_threads, 
         results = [pool.apply_async(generate_partial_dataset, args=(offset_range, angle_range, offset_grid_num, angle_grid_num, index_range, thread_num, save_dir, noise_mode, noise_scale)) for (thread_num, index_range) in enumerate(range_list)]
         for i in range(num_threads):
             retval = results[i].get()
+
+
+def gen_bbox_from_file(read_from_folder, write_to_folder, num_threads, noise_mode, noise_scale, offset_min_size, angle_min_size):
+    # Read to solve
+    read_file = os.path.join(read_from_folder, 'to_solve.csv')
+    if not os.path.isfile(read_file):
+        return
+
+    boxes_to_solve = [] # list of [OffsetMin, OffsetMax, AngleMin, AngleMax]
+    with open(read_file, mode='r') as rf:
+        csv_reader = csv.DictReader(rf)
+        for row in csv_reader:
+            box = [float(row['OffsetMin']), float(row['OffsetMax']), float(row['AngleMin']), float(row['AngleMax'])]
+            boxes_to_solve.append(box)
+
+    if len(boxes_to_solve) < 1:
+        return
+
+    # Check if min size is reached
+    current_offset_size = boxes_to_solve[0][1] - boxes_to_solve[0][0]
+    current_angle_size = boxes_to_solve[0][3] - boxes_to_solve[0][2]
+
+    if (current_offset_size < offset_min_size) or (current_angle_size < angle_min_size):
+        return
+
+    # Create list of boxes to generate
+    divided = divide_boxes(boxes_to_solve)
+    offset_delta = current_offset_size / 4
+    angle_delta = current_angle_size / 4
+    centers = transform_boxes(divided)
+
+    # Save dir
+    if os.path.exists(write_to_folder):
+        print('Dataset for verify adaptive is already generated, skip the generation')
+    else:
+        print("Creating {}".format(write_to_folder))
+        os.makedirs(write_to_folder)
+
+    # pool multiprocessing
+    N = len(centers)
+    n_per_core = math.ceil(N/num_threads)
+    range_list = [(i*n_per_core, min((i+1)*n_per_core, N)) for i in range(num_threads)]
+    pool = mp.Pool(processes=num_threads)
+    results = [pool.apply_async(generate_box_from_list, args=(centers, offset_delta, angle_delta, index_range, thread_num, write_to_folder, noise_mode, noise_scale)) for (thread_num, index_range) in enumerate(range_list)]
+    for i in range(num_threads):
+        retval = results[i].get()
+
+
+def divide_boxes(boxes_to_solve):
+    divided_boxes = []
+    for box in boxes_to_solve:
+        offset_min = box[0]
+        offset_max = box[1]
+        angle_min = box[2]
+        angle_max = box[3]
+        offset_mid = (offset_min + offset_max) / 2
+        angle_mid = (angle_min + angle_max) / 2
+        divide_boxes.append([offset_min, offset_mid, angle_min, angle_mid])
+        divide_boxes.append([offset_mid, offset_max, angle_min, angle_mid])
+        divide_boxes.append([offset_min, offset_mid, angle_mid, angle_max])
+        divide_boxes.append([offset_mid, offset_max, angle_mid, angle_max])
+
+    return divide_boxes
+
+
+def transform_boxes(boxes):
+    # transform from [OffsetMin, OffsetMax, AngleMin, AngleMax] to [OffsetCenter, AngleCenter]
+    box_centers = []
+    for box in boxes:
+        offset_min = box[0]
+        offset_max = box[1]
+        angle_min = box[2]
+        angle_max = box[3]
+        offset_mid = (offset_min + offset_max) / 2
+        angle_mid = (angle_min + angle_max) / 2
+        box_centers.append([offset_mid, angle_mid])
+
+    return box_centers
+
 
 def gen_data_for_estimate(offset_rng, angle_rng, grid_size, target_dir_name, noise_mode='none', noise_scale=0.0):
     data_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'data')
