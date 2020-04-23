@@ -360,6 +360,10 @@ def gen_data_for_verify_parallel(offset_rng, angle_rng, grid_size, num_threads, 
 
 def gen_bbox_from_file(read_from_folder, write_to_folder, num_threads, noise_mode, noise_scale, offset_min_size, angle_min_size):
     # Read to solve
+    data_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'data')
+    read_from_folder = os.path.join(data_dir, read_from_folder)
+    write_to_folder = os.path.join(data_dir, write_to_folder)
+
     read_file = os.path.join(read_from_folder, 'to_solve.csv')
     if not os.path.isfile(read_file):
         return
@@ -413,12 +417,12 @@ def divide_boxes(boxes_to_solve):
         angle_max = box[3]
         offset_mid = (offset_min + offset_max) / 2
         angle_mid = (angle_min + angle_max) / 2
-        divide_boxes.append([offset_min, offset_mid, angle_min, angle_mid])
-        divide_boxes.append([offset_mid, offset_max, angle_min, angle_mid])
-        divide_boxes.append([offset_min, offset_mid, angle_mid, angle_max])
-        divide_boxes.append([offset_mid, offset_max, angle_mid, angle_max])
+        divided_boxes.append([offset_min, offset_mid, angle_min, angle_mid])
+        divided_boxes.append([offset_mid, offset_max, angle_min, angle_mid])
+        divided_boxes.append([offset_min, offset_mid, angle_mid, angle_max])
+        divided_boxes.append([offset_mid, offset_max, angle_mid, angle_max])
 
-    return divide_boxes
+    return divided_boxes
 
 
 def transform_boxes(boxes):
