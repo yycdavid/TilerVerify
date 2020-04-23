@@ -17,10 +17,15 @@ def main():
     parser.add_argument('--num_threads', type=int, help='Number of threads to run the verifier')
     parser.add_argument('--noise', type=str, default='none', help='Noise mode, can be none/uniform/gaussian')
     parser.add_argument('--noise_scale', type=float, default=0.05, help='Scale of noise, for uniform it is the max, for gaussian it is one sigma')
+    parser.add_argument('--from_file', action='store_true',  default=False, help='generate bounding box from file')
+    parser.add_argument('--file_path', type=str, help='path to file to further divide boxes')
     args = parser.parse_args()
 
-    # Generate data for verify as separate files for each thread, in a subdirectory in data
-    generate_data.gen_data_for_verify_parallel(args.offset_range, args.angle_range, args.grid_size, args.num_threads, args.noise, args.noise_scale)
+    if args.from_file:
+        generate_data.gen_bbox_from_file()
+    else:
+        # Generate data for verify as separate files for each thread, in a subdirectory in data
+        generate_data.gen_data_for_verify_parallel(args.offset_range, args.angle_range, args.grid_size, args.num_threads, args.noise, args.noise_scale)
 
 
 
