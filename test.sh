@@ -26,6 +26,13 @@ level=1
 next_folder=$data_name/"$level"
 OFFSET_MIN_SIZE=0.06
 ANGLE_MIN_SIZE=0.06
-python parallel_verify_adaptive.py --read_from_folder $data_name --write_to_folder $next_folder --num_threads $num_threads --offset_min_size $OFFSET_MIN_SIZE --angle_min_size $ANGLE_MIN_SIZE
+#python parallel_verify_adaptive.py --read_from_folder $data_name --write_to_folder $next_folder --num_threads $num_threads --offset_min_size $OFFSET_MIN_SIZE --angle_min_size $ANGLE_MIN_SIZE
 
 # Set timeout=5
+time_limit=5.0
+for thread_number in 1
+do
+    /data/scratch/yicheny/software/julia-9d11f62bcb/bin/julia verify_thread.jl $exp_name $next_folder $thread_number $time_limit
+    sleep .5
+done
+wait
