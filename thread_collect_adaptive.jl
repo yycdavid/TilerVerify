@@ -5,6 +5,9 @@ using MAT
 data_name = ARGS[1]
 num_threads = parse(Int64, ARGS[2])
 
+offset_error_threshold = parse(Float64, ARGS[3])
+angle_error_threshold = parse(Float64, ARGS[4])
+
 main_path = joinpath("data", data_name)
 
 # Collect summary files
@@ -16,29 +19,25 @@ for i in 1:(num_threads-1)
     summary_dt = vcat(summary_dt, thread_dt)
 end
 
+# Filter which one is solved and which needs solve again
+not_solved = (summary_dt[:OffsetMinStatus] .!= "Optimal") .| (summary_dt[:OffsetMaxStatus] .!= "Optimal") .| (summary_dt[:AngleMinStatus] .!= "Optimal") .| (summary_dt[:AngleMaxStatus] .!= "Optimal")
+offset_errors = max.(summary_dt[:OffsetMaxSolved] - summary_dt[:OffsetMin], summary_dt[:OffsetMax] - summary_dt[:OffsetMinSolved])
+angle_errors = max.(summary_dt[:AngleMaxSolved] - summary_dt[:AngleMin], summary_dt[:AngleMax] - summary_dt[:AngleMinSolved])
+solve_again = not_solved .| (offset_errors .> offset_error_threshold) .| (angle_errors .> angle_error_threshold)
+
+solved_dt = summary_dt[.!solve_again, :]
+solve_again_dt = summary_dt[solve_again, :]
 
 # Save good results to a single file
-# STARTHERE: add filtering
-
-
 overall_summary_path = joinpath(main_path, "summary.csv")
 if isfile(overall_summary_path)
     rm(overall_summary_path)
 end
-CSV.write(overall_summary_path, summary_dt)
+CSV.write(overall_summary_path, solved_dt)
 
 # Save bad results to another file
-
-
-# Get error matrix
-offset_errors = max.(summary_dt[:OffsetMaxSolved] - summary_dt[:OffsetMin], summary_dt[:OffsetMax] - summary_dt[:OffsetMinSolved])
-angle_errors = max.(summary_dt[:AngleMaxSolved] - summary_dt[:AngleMin], summary_dt[:AngleMax] - summary_dt[:AngleMinSolved])
-error_result = Dict()
-error_result["offset_errors"] = offset_errors
-error_result["angle_errors"] = angle_errors
-
-info_path = joinpath(main_path, "info.mat")
-info = matread(info_path)
-error_result["offset_grid_num"] = info["offset_grid_num"]
-error_result["angle_grid_num"] = info["angle_grid_num"]
-matwrite(joinpath(main_path, "error_bound_result.mat"), error_result)
+to_solve_path = joinpath(main_path, "to_solve.csv")
+if isfile(to_solve_path)
+    rm(to_solve_path)
+end
+CSV.write(to_solve_path, solve_again_dt)
