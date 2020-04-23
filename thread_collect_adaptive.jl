@@ -18,6 +18,9 @@ end
 
 
 # Save good results to a single file
+# STARTHERE: add filtering
+
+
 overall_summary_path = joinpath(main_path, "summary.csv")
 if isfile(overall_summary_path)
     rm(overall_summary_path)
