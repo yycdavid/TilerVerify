@@ -11,8 +11,8 @@ noise_scale=0.01
 #python trainer/convert_for_milp.py --case road --name $RESULT_FOLDER
 
 
-OFFSET_RANGE=3
-ANGLE_RANGE=3
+OFFSET_RANGE=40
+ANGLE_RANGE=60
 num_threads=20
 exp_name="$noise_mode"_"$noise_scale"
 for grid_size in 0.1
@@ -23,9 +23,9 @@ do
 
     # Compute bound by verify
     data_name=verify_offset_"$OFFSET_RANGE"_angle_"$ANGLE_RANGE"_grid_"$grid_size"_thread_"$num_threads"none0.05
-    for thread_number in $(seq 0 $(expr $NUM_THREADS - 1))
+    for thread_number in $(seq 0 $(expr $num_threads - 1))
     do
-        /data/scratch/yicheny/software/julia-9d11f62bcb/bin/julia verify_thread.jl $exp_name $data_name $thread_number
+        /data/scratch/yicheny/software/julia-9d11f62bcb/bin/julia verify_thread.jl $exp_name $data_name $thread_number &
         sleep .5
     done
     wait

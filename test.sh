@@ -1,15 +1,17 @@
 ## Settings for this experiment
-OFFSET_RANGE=3
-ANGLE_RANGE=3
+OFFSET_RANGE=40
+ANGLE_RANGE=60
 
 INITIAL_GRID_SIZE=0.2
 
-NUM_THREADS=10
+NUM_THREADS=20
 
 TIME_LIMIT=5.0
 
-OFFSET_ERR_THRESH=2.65
-ANGLE_ERR_THRESH=3.69
+#OFFSET_ERR_THRESH=2.65
+#ANGLE_ERR_THRESH=3.69
+OFFSET_ERR_THRESH=5.0
+ANGLE_ERR_THRESH=5.0
 
 # offset_min_size, angle_min_size: don't divide anymore once size smaller than these
 OFFSET_MIN_SIZE=0.06
@@ -19,6 +21,8 @@ ANGLE_MIN_SIZE=0.06
 noise_mode=uniform
 noise_scale=0.01
 exp_name="$noise_mode"_"$noise_scale"
+
+export JULIA_NUM_THREADS=$NUM_THREADS
 
 ## Generate initial bounding boxes
 python parallel_verify.py --offset_range $OFFSET_RANGE --angle_range $ANGLE_RANGE --grid_size $INITIAL_GRID_SIZE --num_threads $NUM_THREADS
