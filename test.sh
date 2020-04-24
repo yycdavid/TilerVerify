@@ -1,38 +1,73 @@
-noise_mode=uniform
-noise_scale=0.01
+## Settings for this experiment
+OFFSET_RANGE=3
+ANGLE_RANGE=3
 
-num_threads=5
-exp_name="$noise_mode"_"$noise_scale"
-#python parallel_verify.py --offset_range 3 --angle_range 3 --grid_size 0.4 --num_threads $num_threads
+INITIAL_GRID_SIZE=0.2
 
-# Compute bound by verify
-#data_name=verify_offset_"$OFFSET_RANGE"_angle_"$ANGLE_RANGE"_grid_"$grid_size"_thread_"$num_threads"
-data_name=verify_offset_3_angle_3_grid_0.4_thread_5none0.05
-#for thread_number in $(seq 0 $(expr $num_threads - 1))
-#for thread_number in 1
-#do
-#    /data/scratch/yicheny/software/julia-9d11f62bcb/bin/julia verify_thread.jl $exp_name $data_name $thread_number &
-#    sleep .5
-#done
-#wait
+NUM_THREADS=10
 
-offset_err_thresh=3.0
-angle_err_thresh=3.0
+TIME_LIMIT=5.0
 
-#/data/scratch/yicheny/software/julia-9d11f62bcb/bin/julia thread_collect_adaptive.jl $data_name $num_threads $offset_err_thresh $angle_err_thresh
+OFFSET_ERR_THRESH=2.65
+ANGLE_ERR_THRESH=3.69
 
 # offset_min_size, angle_min_size: don't divide anymore once size smaller than these
-level=1
-next_folder=$data_name/"$level"
 OFFSET_MIN_SIZE=0.06
 ANGLE_MIN_SIZE=0.06
-#python parallel_verify_adaptive.py --read_from_folder $data_name --write_to_folder $next_folder --num_threads $num_threads --offset_min_size $OFFSET_MIN_SIZE --angle_min_size $ANGLE_MIN_SIZE
 
-# Set timeout=5
-time_limit=5.0
-for thread_number in 1
+# Trained model folder
+noise_mode=uniform
+noise_scale=0.01
+exp_name="$noise_mode"_"$noise_scale"
+
+## Generate initial bounding boxes
+python parallel_verify.py --offset_range $OFFSET_RANGE --angle_range $ANGLE_RANGE --grid_size $INITIAL_GRID_SIZE --num_threads $NUM_THREADS
+
+## Initial verify
+data_name=verify_offset_"$OFFSET_RANGE"_angle_"$ANGLE_RANGE"_grid_"$INITIAL_GRID_SIZE"_thread_"$NUM_THREADS"none0.05
+for thread_number in $(seq 0 $(expr $NUM_THREADS - 1))
 do
-    /data/scratch/yicheny/software/julia-9d11f62bcb/bin/julia verify_thread.jl $exp_name $next_folder $thread_number $time_limit
+    /data/scratch/yicheny/software/julia-9d11f62bcb/bin/julia verify_thread.jl $exp_name $data_name $thread_number $TIME_LIMIT &
     sleep .5
 done
 wait
+
+/data/scratch/yicheny/software/julia-9d11f62bcb/bin/julia thread_collect_adaptive.jl $data_name $NUM_THREADS $OFFSET_ERR_THRESH $ANGLE_ERR_THRESH
+
+
+## Loop to adaptively verify
+level=0
+while true
+do
+    if [ $level -eq 0 ]
+    then
+        read_from_folder=$data_name
+    else
+        read_from_folder=$data_name/"$level"
+    fi
+
+    if [ -f data/$read_from_folder/to_solve.csv ]
+    then
+        level=$(expr $level + 1)
+        next_folder=$data_name/"$level"
+        python parallel_verify_adaptive.py --read_from_folder $read_from_folder --write_to_folder $next_folder --num_threads $NUM_THREADS --offset_min_size $OFFSET_MIN_SIZE --angle_min_size $ANGLE_MIN_SIZE
+
+        if [ -d data/$next_folder ]
+        then
+            for thread_number in $(seq 0 $(expr $NUM_THREADS - 1))
+            do
+                /data/scratch/yicheny/software/julia-9d11f62bcb/bin/julia verify_thread.jl $exp_name $next_folder $thread_number $TIME_LIMIT &
+                sleep .5
+            done
+            wait
+
+            /data/scratch/yicheny/software/julia-9d11f62bcb/bin/julia thread_collect_adaptive.jl $next_folder $NUM_THREADS $OFFSET_ERR_THRESH $ANGLE_ERR_THRESH
+        else
+            echo "Break 1"
+            break
+        fi
+    else
+        echo "Break 2"
+        break
+    fi
+done

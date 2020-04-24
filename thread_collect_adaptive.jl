@@ -15,8 +15,10 @@ thread_file_path = joinpath(main_path, "summary_0.csv")
 summary_dt = CSV.read(thread_file_path)
 for i in 1:(num_threads-1)
     thread_file_path = joinpath(main_path, "summary_$(i).csv")
-    thread_dt = CSV.read(thread_file_path)
-    summary_dt = vcat(summary_dt, thread_dt)
+    if isfile(thread_file_path)
+        thread_dt = CSV.read(thread_file_path)
+        summary_dt = vcat(summary_dt, thread_dt)
+    end
 end
 
 # Filter which one is solved and which needs solve again
@@ -36,8 +38,10 @@ end
 CSV.write(overall_summary_path, solved_dt)
 
 # Save bad results to another file
-to_solve_path = joinpath(main_path, "to_solve.csv")
-if isfile(to_solve_path)
-    rm(to_solve_path)
+if nrow(solve_again_dt) > 0
+    to_solve_path = joinpath(main_path, "to_solve.csv")
+    if isfile(to_solve_path)
+        rm(to_solve_path)
+    end
+    CSV.write(to_solve_path, solve_again_dt)
 end
-CSV.write(to_solve_path, solve_again_dt)

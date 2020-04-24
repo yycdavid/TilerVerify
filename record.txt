@@ -30,9 +30,9 @@ In analysis for lidar, remember to revert axes when plotting heatmaps (indices t
 04212020 Plan
 - Adaptive tiling
     - add flag to parallel_verify (generate bounding boxes) to read in list of unsolved boxes and divide further. Save in sub-directory (DONE)
-    - add flag to verify_thread.jl to set timeout
+    - add flag to verify_thread.jl to set timeout (DONE)
     - add flag to thread_collect.jl to save unsolved to a separate file (DONE)
-    - Use loop in shell script to control when to stop (checking file exists)
+    - Use loop in shell script to control when to stop (checking file exists) (DONE)
 - Run adaptive tiling for road case, compare time with normal run
 
 - BNN

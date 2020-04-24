@@ -350,7 +350,7 @@ def gen_data_for_verify_parallel(offset_rng, angle_rng, grid_size, num_threads, 
 
         # Split the dataset to separate files
         N = offset_grid_num * angle_grid_num
-        n_per_core = N//num_threads +1
+        n_per_core = math.ceil(N/num_threads)
         range_list = [(i*n_per_core, min((i+1)*n_per_core, N)) for i in range(num_threads)]
         pool = mp.Pool(processes=num_threads)
         results = [pool.apply_async(generate_partial_dataset, args=(offset_range, angle_range, offset_grid_num, angle_grid_num, index_range, thread_num, save_dir, noise_mode, noise_scale)) for (thread_num, index_range) in enumerate(range_list)]
