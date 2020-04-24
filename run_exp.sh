@@ -17,7 +17,7 @@ num_threads=20
 exp_name="$noise_mode"_"$noise_scale"
 for grid_size in 0.1
 do
-    export JULIA_NUM_THREADS=$num_threads
+    #export JULIA_NUM_THREADS=$num_threads
     # Generate dataset for estimate and bound
     python parallel_verify.py --offset_range $OFFSET_RANGE --angle_range $ANGLE_RANGE --grid_size $grid_size --num_threads $num_threads
 

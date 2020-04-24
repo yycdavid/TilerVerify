@@ -22,17 +22,17 @@ noise_mode=uniform
 noise_scale=0.01
 exp_name="$noise_mode"_"$noise_scale"
 
-export JULIA_NUM_THREADS=$NUM_THREADS
+#export JULIA_NUM_THREADS=$NUM_THREADS
 
 ## Generate initial bounding boxes
-python parallel_verify.py --offset_range $OFFSET_RANGE --angle_range $ANGLE_RANGE --grid_size $INITIAL_GRID_SIZE --num_threads $NUM_THREADS
+#python parallel_verify.py --offset_range $OFFSET_RANGE --angle_range $ANGLE_RANGE --grid_size $INITIAL_GRID_SIZE --num_threads $NUM_THREADS
 
 ## Initial verify
 data_name=verify_offset_"$OFFSET_RANGE"_angle_"$ANGLE_RANGE"_grid_"$INITIAL_GRID_SIZE"_thread_"$NUM_THREADS"none0.05
 for thread_number in $(seq 0 $(expr $NUM_THREADS - 1))
 do
     /data/scratch/yicheny/software/julia-9d11f62bcb/bin/julia verify_thread.jl $exp_name $data_name $thread_number $TIME_LIMIT &
-    sleep .5
+    sleep 0.5
 done
 wait
 
@@ -61,7 +61,7 @@ do
             for thread_number in $(seq 0 $(expr $NUM_THREADS - 1))
             do
                 /data/scratch/yicheny/software/julia-9d11f62bcb/bin/julia verify_thread.jl $exp_name $next_folder $thread_number $TIME_LIMIT &
-                sleep .5
+                sleep 0.5
             done
             wait
 
