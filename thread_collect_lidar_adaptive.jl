@@ -25,8 +25,10 @@ for label in 0:2
         summary_dt = CSV.read(thread_file_path)
         for i in 1:(num_threads-1)
             thread_file_path = joinpath(main_path, "$(label)_summary_$(i).csv")
-            thread_dt = CSV.read(thread_file_path)
-            summary_dt = vcat(summary_dt, thread_dt)
+            if isfile(thread_file_path)
+                thread_dt = CSV.read(thread_file_path)
+                summary_dt = vcat(summary_dt, thread_dt)
+            end
         end
 
         # Filter which one is solved and which needs solve again
