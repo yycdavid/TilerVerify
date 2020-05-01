@@ -9,6 +9,7 @@ import argparse
 import math
 import multiprocessing as mp
 from enum import Enum
+import csv
 
 
 class Shape(Enum):
@@ -218,6 +219,50 @@ def generate_partial_dataset(shape, distance_range, angle_range, distance_grid_n
     return True
 
 
+def generate_box_from_list(shape, boxes, index_range, thread_num, write_to_folder, noise_mode, noise_scale):
+
+    start = index_range[0]
+    finish = index_range[1]
+    if finish - start < 1:
+        return True
+
+    image_lower_bounds = []
+    image_upper_bounds = []
+    distance_lower_bounds = []
+    distance_upper_bounds = []
+    angle_lower_bounds = []
+    angle_upper_bounds = []
+    start = index_range[0]
+    finish = index_range[1]
+    sub_dataset = {}
+    sub_dataset['index'] = np.array(range(start, finish))
+    sensor = get_sensor(shape, noise_mode, noise_scale)
+    for index in tqdm(range(start, finish)):
+        distance_delta = (boxes[index][1] - boxes[index][0]) / 2
+        distance = (boxes[index][1] + boxes[index][0]) / 2
+        angle_delta = (boxes[index][3] - boxes[index][2]) / 2
+        angle = (boxes[index][3] + boxes[index][2]) / 2
+        lower_bound_matrix, upper_bound_matrix = sensor.take_measurement_with_range(distance, angle, distance_delta, angle_delta)
+        image_lower_bounds.append(np.expand_dims(lower_bound_matrix, axis=0))
+        image_upper_bounds.append(np.expand_dims(upper_bound_matrix, axis=0))
+        distance_lower_bounds.append(distance - distance_delta)
+        distance_upper_bounds.append(distance + distance_delta)
+        angle_lower_bounds.append(angle - angle_delta)
+        angle_upper_bounds.append(angle + angle_delta)
+
+    sub_dataset['image_lower_bounds'] = np.concatenate(image_lower_bounds, axis=0) # (N, H, W)
+    sub_dataset['image_upper_bounds'] = np.concatenate(image_upper_bounds, axis=0) # (N, H, W)
+    sub_dataset['distance_lower_bounds'] = np.array(distance_lower_bounds) # (N,)
+    sub_dataset['distance_upper_bounds'] = np.array(distance_upper_bounds) # (N,)
+    sub_dataset['angle_lower_bounds'] = np.array(angle_lower_bounds) # (N,)
+    sub_dataset['angle_upper_bounds'] = np.array(angle_upper_bounds) # (N,)
+
+    sio.savemat(os.path.join(write_to_folder, '{}_thread_{}.mat'.format(shape.value, thread_num)), sub_dataset)
+
+    return True
+
+
+
 def gen_data_for_verify_parallel(distance_min, distance_max, angle_rng, grid_size, num_threads, noise_mode, noise_scale):
     distance_range = [distance_min, distance_max]
     angle_range = [-angle_rng, angle_rng]
@@ -252,7 +297,7 @@ def gen_data_for_verify_parallel(distance_min, distance_max, angle_rng, grid_siz
         # Split the dataset to separate files
         N = distance_grid_num * angle_grid_num
         num_threads_per_class = num_threads//3
-        n_per_core = N//num_threads_per_class +1
+        n_per_core = math.ceil(N/num_threads_per_class)
         range_list = [(i*n_per_core, min((i+1)*n_per_core, N)) for i in range(num_threads_per_class)]
         pool = mp.Pool(processes=num_threads)
         results = {}
@@ -262,6 +307,92 @@ def gen_data_for_verify_parallel(distance_min, distance_max, angle_rng, grid_siz
         for shape in Shape:
             for i in range(num_threads_per_class):
                 retval = results[shape][i].get()
+
+
+def gen_bbox_from_file(read_from_folder, write_to_folder, num_threads, noise_mode, noise_scale, angle_min_size):
+    for shape in Shape:
+        # Read to solve
+        data_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'data')
+        read_from_folder = os.path.join(data_dir, read_from_folder)
+        write_to_folder = os.path.join(data_dir, write_to_folder)
+
+        read_file = os.path.join(read_from_folder, f'{shape.value}_to_solve.csv')
+        if not os.path.isfile(read_file):
+            continue
+
+        boxes_to_solve = [] # list of [DistanceMin, DistanceMax, AngleMin, AngleMax]
+        with open(read_file, mode='r') as rf:
+            csv_reader = csv.DictReader(rf)
+            for row in csv_reader:
+                box = [float(row['DistanceMin']), float(row['DistanceMax']), float(row['AngleMin']), float(row['AngleMax'])]
+                boxes_to_solve.append(box)
+
+        if len(boxes_to_solve) < 1:
+            continue
+
+        # Check if min size is reached
+        current_angle_size = boxes_to_solve[0][3] - boxes_to_solve[0][2]
+
+        if (current_angle_size < angle_min_size):
+            continue
+
+        # Create list of boxes to generate
+        divided = divide_boxes(boxes_to_solve)
+        #centers = transform_boxes(divided)
+
+        # Save dir
+        if not os.path.exists(write_to_folder):
+            print("Creating {}".format(write_to_folder))
+            os.makedirs(write_to_folder)
+
+        # pool multiprocessing
+        N = len(divided)
+        num_threads_per_class = num_threads//3
+        n_per_core = math.ceil(N/num_threads_per_class)
+        range_list = [(i*n_per_core, min((i+1)*n_per_core, N)) for i in range(num_threads_per_class)]
+        pool = mp.Pool(processes=num_threads_per_class)
+
+        results = [pool.apply_async(generate_box_from_list, args=(shape, divided, index_range, thread_num, write_to_folder, noise_mode, noise_scale)) for (thread_num, index_range) in enumerate(range_list)]
+
+        for i in range(num_threads_per_class):
+            retval = results[i].get()
+
+
+def divide_boxes(boxes_to_solve):
+    divided_boxes = []
+    for box in boxes_to_solve:
+        distance_min = box[0]
+        distance_max = box[1]
+        angle_min = box[2]
+        angle_max = box[3]
+        distance_mid = average_inverse_scale(distance_min, distance_max)
+        angle_mid = (angle_min + angle_max) / 2
+        divided_boxes.append([distance_min, distance_mid, angle_min, angle_mid])
+        divided_boxes.append([distance_mid, distance_max, angle_min, angle_mid])
+        divided_boxes.append([distance_min, distance_mid, angle_mid, angle_max])
+        divided_boxes.append([distance_mid, distance_max, angle_mid, angle_max])
+
+    return divided_boxes
+
+
+def average_inverse_scale(small, large):
+    inv_mid = (1/small + 1/large)/2
+    return 1/inv_mid
+
+
+def transform_boxes(boxes):
+    # transform from [distanceMin, distanceMax, AngleMin, AngleMax] to [distanceCenter, AngleCenter]
+    box_centers = []
+    for box in boxes:
+        distance_min = box[0]
+        distance_max = box[1]
+        angle_min = box[2]
+        angle_max = box[3]
+        distance_mid = (distance_min + distance_max) / 2
+        angle_mid = (angle_min + angle_max) / 2
+        box_centers.append([distance_mid, angle_mid])
+
+    return box_centers
 
 
 def main():
