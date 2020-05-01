@@ -4,6 +4,7 @@ using MAT
 
 data_name = ARGS[1]
 num_threads = parse(Int64, ARGS[2])
+save_folder = ARGS[3]
 
 VERIFIED_TRUE = 0
 VERIFIED_FALSE = 1
@@ -11,7 +12,8 @@ NOT_SURE = 2
 
 verify_result = Dict()
 
-main_path = joinpath("data", data_name)
+exp_path = joinpath("data", data_name)
+main_path = joinpath(exp_path, save_folder)
 for label in 0:2
     # Collect summary files
     thread_file_path = joinpath(main_path, "$(label)_summary_0.csv")
@@ -42,7 +44,7 @@ for label in 0:2
     end
 end
 
-info_path = joinpath(main_path, "info.mat")
+info_path = joinpath(exp_path, "info.mat")
 info = matread(info_path)
 verify_result["distance_grid_num"] = info["distance_grid_num"]
 verify_result["angle_grid_num"] = info["angle_grid_num"]

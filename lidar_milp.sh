@@ -20,6 +20,7 @@ ANGLE_RANGE=45
 num_threads=21
 num_threads_per_class=$(expr $num_threads / 3)
 exp_name=$RESULT_FOLDER
+save_folder=milp
 for grid_size in 1.0 0.5
 do
 #    # Generate dataset for estimate and bound
@@ -31,13 +32,12 @@ do
     do
         for thread_number in $(seq 0 $(expr $num_threads_per_class - 1))
         do
-            /data/scratch/yicheny/software/julia-9d11f62bcb/bin/julia verify_thread_lidar.jl $exp_name $data_name $shape $thread_number &
+            /data/scratch/yicheny/software/julia-9d11f62bcb/bin/julia verify_thread_lidar.jl $exp_name $data_name $shape $thread_number $save_folder &
             sleep .5
         done
     done
     wait
-    /data/scratch/yicheny/software/julia-9d11f62bcb/bin/julia thread_collect_lidar.jl $data_name $num_threads_per_class
+    /data/scratch/yicheny/software/julia-9d11f62bcb/bin/julia thread_collect_lidar.jl $data_name $num_threads_per_class $save_folder
     # Get heatmap
-    python analysis/heatmap_lidar.py --result_dir data/"$data_name" --distance_min $DISTANCE_MIN --distance_max $DISTANCE_MAX --angle_range $ANGLE_RANGE
-    python analysis/statistics.py --result_dir data/"$data_name"
+    python analysis/heatmap_lidar.py --result_dir data/"$data_name"/"$save_folder" --distance_min $DISTANCE_MIN --distance_max $DISTANCE_MAX --angle_range $ANGLE_RANGE
 done
