@@ -12,7 +12,7 @@ TRAIN_DATA=train.pickle
 VALID_DATA=valid.pickle
 RESULT_FOLDER=lidar_small_"$noise_mode"_"$noise_scale"
 #python3 trainer/train.py --case lidar --dataset_folder lidar_train_small_"$noise_mode"_"$noise_scale" --train_data $TRAIN_DATA --val_data $VALID_DATA --result $RESULT_FOLDER
-#python3 trainer/convert_for_milp.py --case lidar --name $RESULT_FOLDER
+python trainer/convert_for_milp.py --case lidar --name $RESULT_FOLDER
 
 DISTANCE_MIN=30
 DISTANCE_MAX=60
@@ -23,23 +23,21 @@ exp_name=$RESULT_FOLDER
 for grid_size in 1.0 0.5
 do
 #    # Generate dataset for estimate and bound
-    #python3 parallel_verify_lidar.py --distance_min $DISTANCE_MIN --distance_max $DISTANCE_MAX --angle_range $ANGLE_RANGE --grid_size $grid_size --num_threads $num_threads --noise $noise_mode --noise_scale $noise_scale
+    #python parallel_verify_lidar.py --distance_min $DISTANCE_MIN --distance_max $DISTANCE_MAX --angle_range $ANGLE_RANGE --grid_size $grid_size --num_threads $num_threads --noise $noise_mode --noise_scale $noise_scale
 #
-#    # Compute bound by verify
+    # Compute bound by verify
     data_name=lidar_distance_min_"$DISTANCE_MIN"_max_"$DISTANCE_MAX"_angle_"$ANGLE_RANGE"_grid_"$grid_size"_thread_"$num_threads""$noise_mode""$noise_scale"_small
-    #for shape in 0 1 2
-    ##for shape in 0
-    #do
-    #    for thread_number in $(seq 0 $(expr $num_threads_per_class - 1))
-    #    #for thread_number in 1
-    #    do
-    #        /raid/yicheny/software/julia-9d11f62bcb/bin/julia verify_thread_lidar.jl $exp_name $data_name $shape #$thread_number &
-    #        sleep .5
-    #    done
-    #done
-    #wait
-    #/raid/yicheny/software/julia-9d11f62bcb/bin/julia thread_collect_lidar.jl $data_name $num_threads_per_class
+    for shape in 0 1 2
+    do
+        for thread_number in $(seq 0 $(expr $num_threads_per_class - 1))
+        do
+            /data/scratch/yicheny/software/julia-9d11f62bcb/bin/julia verify_thread_lidar.jl $exp_name $data_name $shape $thread_number &
+            sleep .5
+        done
+    done
+    wait
+    /data/scratch/yicheny/software/julia-9d11f62bcb/bin/julia thread_collect_lidar.jl $data_name $num_threads_per_class
     # Get heatmap
-    python3 analysis/heatmap_lidar.py --result_dir data/"$data_name" --distance_min $DISTANCE_MIN --distance_max $DISTANCE_MAX --angle_range $ANGLE_RANGE
-    #python3 analysis/statistics.py --result_dir data/"$data_name"
+    python analysis/heatmap_lidar.py --result_dir data/"$data_name" --distance_min $DISTANCE_MIN --distance_max $DISTANCE_MAX --angle_range $ANGLE_RANGE
+    python analysis/statistics.py --result_dir data/"$data_name"
 done

@@ -8,10 +8,10 @@ NUM_THREADS=20
 
 TIME_LIMIT=5.0
 
-#OFFSET_ERR_THRESH=2.65
-#ANGLE_ERR_THRESH=3.69
-OFFSET_ERR_THRESH=5.0
-ANGLE_ERR_THRESH=5.0
+OFFSET_ERR_THRESH=2.65
+ANGLE_ERR_THRESH=3.69
+#OFFSET_ERR_THRESH=5.0
+#ANGLE_ERR_THRESH=5.0
 
 # offset_min_size, angle_min_size: don't divide anymore once size smaller than these
 OFFSET_MIN_SIZE=0.06
@@ -25,7 +25,7 @@ exp_name="$noise_mode"_"$noise_scale"
 #export JULIA_NUM_THREADS=$NUM_THREADS
 
 ## Generate initial bounding boxes
-#python parallel_verify.py --offset_range $OFFSET_RANGE --angle_range $ANGLE_RANGE --grid_size $INITIAL_GRID_SIZE --num_threads $NUM_THREADS
+python parallel_verify.py --offset_range $OFFSET_RANGE --angle_range $ANGLE_RANGE --grid_size $INITIAL_GRID_SIZE --num_threads $NUM_THREADS
 
 ## Initial verify
 data_name=verify_offset_"$OFFSET_RANGE"_angle_"$ANGLE_RANGE"_grid_"$INITIAL_GRID_SIZE"_thread_"$NUM_THREADS"none0.05
