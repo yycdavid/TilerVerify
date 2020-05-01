@@ -12,6 +12,7 @@ NOT_SURE = 2
 def get_args():
     parser = argparse.ArgumentParser(description='Main experiment script')
     parser.add_argument('--exp_dir', type=str, default='test', help='folder storing results')
+    parser.add_argument('--save-folder', type=str, default='', help='folder that save verification results')
     parser.add_argument('--num_threads', type=int, default=0, help='number of threads')
     return parser.parse_args()
 
@@ -28,8 +29,9 @@ def convert_solved_status(status):
 
 def main():
     args = get_args()
-    base_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
-    data_dir = os.path.join(base_dir, 'data', args.exp_dir)
+    base_dir = os.path.dirname(os.path.realpath(__file__))
+    exp_dir = os.path.join(base_dir, 'data', args.exp_dir)
+    data_dir = os.path.join(exp_dir, args.save_folder)
 
     verify_result = {}
     time = {}
@@ -37,7 +39,7 @@ def main():
     total_build_times = []
     total_times = []
 
-    info = sio.loadmat(os.path.join(data_dir, 'info.mat'))
+    info = sio.loadmat(os.path.join(exp_dir, 'info.mat'))
     distance_grid_num = info['distance_grid_num'].item()
     angle_grid_num = info['angle_grid_num'].item()
     num_tiles_per_class = distance_grid_num * angle_grid_num

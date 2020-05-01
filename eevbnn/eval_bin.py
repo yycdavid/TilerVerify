@@ -1223,6 +1223,7 @@ def main():
     parser.add_argument('--lidar-data-folder', type=str, default='', help='Bouding box data folder to verify')
     parser.add_argument('--shape', type=int, default=-1, help='0/1/2, the shape, also which file to read')
     parser.add_argument('--thread', type=int, default=-1, help='Thread number, which file to read')
+    parser.add_argument('--save-folder', type=str, default='', help='subfolder within DATA_FOLDER to store verified results')
     args = parser.parse_args()
 
     if args.log_file:
@@ -1392,7 +1393,10 @@ def main_lidar(args):
 
     verify_data = sio.loadmat(data_path)
 
-    args.write_result = os.path.join(exp_folder, f'{label}_summary_{thread_num}.json')
+    result_folder = os.path.join(exp_folder, args.save_folder)
+    ensure_dir(result_folder)
+
+    args.write_result = os.path.join(result_folder, f'{label}_summary_{thread_num}.json')
 
     np.set_printoptions(precision=1, suppress=True)
 

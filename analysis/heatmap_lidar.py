@@ -90,16 +90,20 @@ def main():
     parser.add_argument('--distance_min', type=int, help='range for distance')
     parser.add_argument('--distance_max', type=int, help='range for distance')
     parser.add_argument('--angle_range', type=int, help='range for angle')
+    parser.add_argument('--sio', action='store_true')
     args = parser.parse_args()
     base_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
     result_dir = os.path.join(base_dir, args.result_dir)
 
     # Plot error bound maps
     verify_file_path = os.path.join(result_dir, 'verify_result.mat')
-    with h5py.File(verify_file_path, 'r') as f:
-        verify_result = {}
-        for k, v in f.items():
-            verify_result[k] = np.array(v)
+    if args.sio:
+        verify_result = sio.loadmat(verify_file_path)
+    else:
+        with h5py.File(verify_file_path, 'r') as f:
+            verify_result = {}
+            for k, v in f.items():
+                verify_result[k] = np.array(v)
 
     distance_grid_num = int(verify_result['distance_grid_num'])
     angle_grid_num = int(verify_result['angle_grid_num'])
