@@ -3,7 +3,7 @@ SAVE_FOLDER=bnn
 # Train model
 #CUDA_VISIBLE_DEVICES=1 python -m eevbnn train_bin RoadSign0 trained_models/lidar_quant_061_small --input-quant 0.61 --set-global-param g_channel_scale=1 --set-global g_weight_decay=2e-6 --epoch 100
 
-for grid_size in 1.0
+for grid_size in 0.5
 do
     DATA_FOLDER=lidar_distance_min_30_max_60_angle_45_grid_"$grid_size"_thread_21gaussian0.001_small
     num_threads_per_class=7
