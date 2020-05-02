@@ -1378,7 +1378,8 @@ def main_impl(args):
 
 
 def main_lidar(args):
-    device = "cuda" if torch.cuda.is_available() else "cpu"
+    device = "cpu"
+    #device = "cuda" if torch.cuda.is_available() else "cpu"
     print(f'argv: {sys.argv}')
     print(f'parsed args: {args}')
 
@@ -1389,7 +1390,7 @@ def main_lidar(args):
     exp_folder = os.path.join(args.data, args.lidar_data_folder)
     data_path = os.path.join(exp_folder, f'{label}_thread_{thread_num}.mat')
     if not os.path.isfile(data_path):
-        raise Error("Lidar data to verify doesn't exists")
+        print("Lidar data to verify doesn't exists: " + f'{label}_thread_{thread_num}.mat')
 
     verify_data = sio.loadmat(data_path)
 
