@@ -194,27 +194,76 @@ def main_adaptive(args):
     base_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
     result_dir = os.path.join(base_dir, args.result_dir)
 
-    solved_count = 0.0
+    if args.plot_final_size > 0:
+        current_size = args.plot_final_size
+        grid_sizes = []
+        solved_counts = []
 
-    weight = 1.0
+        weight = 1.0
 
-    solved_count += get_solved_count(result_dir, weight)
+        grid_sizes.append(current_size)
+        solved_counts.append(get_solved_count(result_dir, weight))
 
-    next_level = '1'
-    while os.path.isdir(os.path.join(result_dir, next_level)):
-        next_dir = os.path.join(result_dir, next_level)
-        weight = weight / 4
-        solved_count += get_solved_count(next_dir, weight)
+        next_level = '1'
+        if args.limit_max_level:
+            while int(next_level) <= 2:
+                next_dir = os.path.join(result_dir, next_level)
+                weight = weight / 4
+                current_size = current_size / 2
+                grid_sizes.append(current_size)
+                solved_counts.append(get_solved_count(next_dir, weight))
 
-        next_level = str(int(next_level)+1)
+                next_level = str(int(next_level)+1)
 
-    last_dir = next_dir
-    not_solved_count = get_not_solved_count(last_dir, weight)
+        else:
+            while os.path.isdir(os.path.join(result_dir, next_level)):
+                next_dir = os.path.join(result_dir, next_level)
+                weight = weight / 4
+                current_size = current_size / 2
+                grid_sizes.append(current_size)
+                solved_counts.append(get_solved_count(next_dir, weight))
 
-    verified_percentage = solved_count / (solved_count + not_solved_count) * 100
+                next_level = str(int(next_level)+1)
 
-    with open(os.path.join(result_dir, 'verified_perc.txt'), 'w') as fout:
-        fout.write(f'Verified percentage: {verified_percentage}')
+        last_dir = next_dir
+        not_solved_count = get_not_solved_count(last_dir, weight)
+
+        solved_counts[-1] += not_solved_count
+
+        total_counts = sum(solved_counts)
+        solved_perc = [c/total_counts*100 for c in solved_counts]
+
+        plt.figure()
+        plt.plot(grid_sizes, solved_perc, marker='s')
+        plt.xlabel('Grid size')
+        plt.ylabel('Percentage of regions with final tile size')
+
+        plot_file_path = os.path.join(result_dir, 'final_size_dist.pdf')
+        plt.savefig(plot_file_path)
+
+    else:
+
+        solved_count = 0.0
+
+        weight = 1.0
+
+        solved_count += get_solved_count(result_dir, weight)
+
+        next_level = '1'
+        while os.path.isdir(os.path.join(result_dir, next_level)):
+            next_dir = os.path.join(result_dir, next_level)
+            weight = weight / 4
+            solved_count += get_solved_count(next_dir, weight)
+
+            next_level = str(int(next_level)+1)
+
+        last_dir = next_dir
+        not_solved_count = get_not_solved_count(last_dir, weight)
+
+        verified_percentage = solved_count / (solved_count + not_solved_count) * 100
+
+        with open(os.path.join(result_dir, 'verified_perc.txt'), 'w') as fout:
+            fout.write(f'Verified percentage: {verified_percentage}')
 
 
 def main_normal(args):
@@ -249,9 +298,15 @@ def main_perc_verified():
     parser = argparse.ArgumentParser(description='Get stats for lidar')
     parser.add_argument('--result_dir', help='path to result to get heatmap')
     parser.add_argument('--adaptive', action='store_true')
+    parser.add_argument('--limit_max_level', action='store_true')
     parser.add_argument('--offset_err_thresh', type=float, default=0.0)
     parser.add_argument('--angle_err_thresh', type=float, default=0.0)
+    parser.add_argument('--plot_final_size', type=float, default=-0.1)
     args = parser.parse_args()
+
+    plt.rcParams.update({'font.size': 16})
+    plt.rcParams.update({'figure.autolayout': True})
+    
     if args.adaptive:
         main_adaptive(args)
     else:

@@ -15,7 +15,7 @@ OFFSET_RANGE=40
 ANGLE_RANGE=60
 num_threads=20
 exp_name="$noise_mode"_"$noise_scale"
-for grid_size in 0.2 0.05 0.4 0.8
+for grid_size in 0.05 0.4 0.8
 do
     #export JULIA_NUM_THREADS=$num_threads
     # Generate dataset for estimate and bound
@@ -31,9 +31,9 @@ do
     wait
     /data/scratch/yicheny/software/julia-9d11f62bcb/bin/julia thread_collect.jl $data_name $num_threads
     # Compute estimate
-    python generate_data.py --mode estimate --offset_range $OFFSET_RANGE --angle_range $ANGLE_RANGE --grid_size $grid_size --target_dir_name $data_name
-    python trainer/error_estimate.py --exp_name $exp_name --target_dir_name $data_name --grid_size $grid_size
+    #python generate_data.py --mode estimate --offset_range $OFFSET_RANGE --angle_range $ANGLE_RANGE --grid_size $grid_size --target_dir_name $data_name
+    #python trainer/error_estimate.py --exp_name $exp_name --target_dir_name $data_name --grid_size $grid_size
     # Get heatmap
-    python analysis/heatmap.py --result_dir data/"$data_name" --offset_range $OFFSET_RANGE --angle_range $ANGLE_RANGE
-    python analysis/statistics.py --result_dir data/"$data_name"
+    #python analysis/heatmap.py --result_dir data/"$data_name" --offset_range $OFFSET_RANGE --angle_range $ANGLE_RANGE
+    #python analysis/statistics.py --result_dir data/"$data_name"
 done

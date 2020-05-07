@@ -102,7 +102,8 @@ def plot_tradeoff():
     fixed_time = [253788, 52607, 32935, 47841, 96731]
     fixed_time = [time/3600 for time in fixed_time]
     fixed_perc = [99.50, 98.50, 90.56, 35.29, 0.06]
-    adaptive_time = 30000/3600
+    adaptive_time = 32593/3600
+    # 23995 + 6680 + 1918
     adaptive_perc = 99.70
 
     plt.figure()
@@ -116,13 +117,56 @@ def plot_tradeoff():
     plot_file_path = 'trade_off_1.pdf'
     plt.savefig(plot_file_path)
 
+
+def plot_tradeoff_perc():
+    fixed_time = [253788, 52607, 32935, 47841, 96731]
+    fixed_time = [time/3600 for time in fixed_time]
+    fixed_perc = [99.50, 98.50, 90.56, 35.29, 0.06]
+    grid_sizes = [0.05, 0.1, 0.2, 0.4, 0.8]
+    adaptive_time = 32593/3600
+    # 23995 + 6680 + 1918
+    adaptive_perc = 99.70
+
+    plt.figure()
+    plt.plot(grid_sizes, fixed_perc, marker='s', label='fixed')
+    plt.xlabel('Grid size')
+    plt.ylabel('Percentage verified')
+
+    plt.plot(grid_sizes, [adaptive_perc for _ in grid_sizes], c='r', label='adaptive')
+    plt.legend(loc='upper right')
+
+    plot_file_path = 'trade_off_perc.pdf'
+    plt.savefig(plot_file_path)
+
+def plot_tradeoff_time():
+    fixed_time = [253788, 52607, 32935, 47841, 96731]
+    fixed_time = [time/3600 for time in fixed_time]
+    fixed_perc = [99.50, 98.50, 90.56, 35.29, 0.06]
+    grid_sizes = [0.05, 0.1, 0.2, 0.4, 0.8]
+    adaptive_time = 32593/3600
+    # 23995 + 6680 + 1918
+    adaptive_perc = 99.70
+
+    plt.figure()
+    plt.plot(grid_sizes, fixed_time, marker='s', label='fixed')
+    plt.xlabel('Grid size')
+    plt.ylabel('Verification time (hours)')
+
+    plt.plot(grid_sizes, [adaptive_time for _ in grid_sizes], c='r', label='adaptive')
+    plt.legend(loc='upper right')
+
+    plot_file_path = 'trade_off_time.pdf'
+    plt.savefig(plot_file_path)
+
+
 def main():
     plt.rcParams.update({'font.size': 16})
     plt.rcParams.update({'figure.autolayout': True})
     #plot_99_against_grid_size()
     #plot_trusted_region_against_grid_size()
     #plot_time_against_grid_size()
-    plot_tradeoff()
+    plot_tradeoff_perc()
+    plot_tradeoff_time()
 
 if __name__ == '__main__':
     try:
