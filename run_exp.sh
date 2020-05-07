@@ -15,7 +15,7 @@ OFFSET_RANGE=40
 ANGLE_RANGE=60
 num_threads=20
 exp_name="$noise_mode"_"$noise_scale"
-for grid_size in 0.1
+for grid_size in 0.05 0.2 0.4 0.8
 do
     #export JULIA_NUM_THREADS=$num_threads
     # Generate dataset for estimate and bound

@@ -6,7 +6,7 @@ import h5py
 from heatmap import get_error_matrix
 import matplotlib.pyplot as plt
 from tqdm import tqdm
-
+import csv
 
 RESULTS_ROOT = 'trained_models'
 
@@ -161,6 +161,103 @@ def compute_plot_cumulative_histogram(result_dir, offset_error_est_matrix, angle
         plot_cumulative_histogram(setting, matrix, stats_dir)
 
 
+
+def read_csv_count_line(target_file):
+    with open(target_file) as csv_file:
+        csv_reader = csv.reader(csv_file, delimiter=',')
+        line_count = -1
+        for row in csv_reader:
+            line_count += 1
+
+    return line_count
+
+
+def get_solved_count(folder, weight):
+    count = 0.0
+    solved_file = os.path.join(folder, 'summary.csv')
+    if os.path.isfile(solved_file):
+        count += read_csv_count_line(solved_file)
+
+    return count * weight
+
+
+def get_not_solved_count(folder, weight):
+    count = 0.0
+    solved_file = os.path.join(folder, 'to_solve.csv')
+    if os.path.isfile(solved_file):
+        count += read_csv_count_line(solved_file)
+
+    return count * weight
+
+
+def main_adaptive(args):
+    base_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+    result_dir = os.path.join(base_dir, args.result_dir)
+
+    solved_count = 0.0
+
+    weight = 1.0
+
+    solved_count += get_solved_count(result_dir, weight)
+
+    next_level = '1'
+    while os.path.isdir(os.path.join(result_dir, next_level)):
+        next_dir = os.path.join(result_dir, next_level)
+        weight = weight / 4
+        solved_count += get_solved_count(next_dir, weight)
+
+        next_level = str(int(next_level)+1)
+
+    last_dir = next_dir
+    not_solved_count = get_not_solved_count(last_dir, weight)
+
+    verified_percentage = solved_count / (solved_count + not_solved_count) * 100
+
+    with open(os.path.join(result_dir, 'verified_perc.txt'), 'w') as fout:
+        fout.write(f'Verified percentage: {verified_percentage}')
+
+
+def main_normal(args):
+    base_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+    result_dir = os.path.join(base_dir, args.result_dir)
+
+    # Plot error bound maps
+    verify_file_path = os.path.join(result_dir, 'error_bound_result.mat')
+
+    error_bound_file_path = os.path.join(result_dir, 'error_bound_result.mat')
+    with h5py.File(error_bound_file_path, 'r') as f:
+        error_bound_result = {}
+        for k, v in f.items():
+            error_bound_result[k] = np.array(v)
+
+    distance_grid_num = int(error_bound_result['offset_grid_num'])
+    angle_grid_num = int(error_bound_result['angle_grid_num'])
+
+    verified_count = 0
+
+    for i in range(distance_grid_num * angle_grid_num):
+        if (error_bound_result['angle_errors'][i] < args.angle_err_thresh) and (error_bound_result['offset_errors'][i] < args.offset_err_thresh):
+            verified_count += 1
+
+    verified_percentage = verified_count / (distance_grid_num * angle_grid_num) * 100
+
+    with open(os.path.join(result_dir, 'verified_perc.txt'), 'w') as fout:
+        fout.write(f'Verified percentage (offset error < {args.offset_err_thresh}, angle error < {args.angle_err_thresh}): {verified_percentage}')
+
+
+def main_perc_verified():
+    parser = argparse.ArgumentParser(description='Get stats for lidar')
+    parser.add_argument('--result_dir', help='path to result to get heatmap')
+    parser.add_argument('--adaptive', action='store_true')
+    parser.add_argument('--offset_err_thresh', type=float, default=0.0)
+    parser.add_argument('--angle_err_thresh', type=float, default=0.0)
+    args = parser.parse_args()
+    if args.adaptive:
+        main_adaptive(args)
+    else:
+        main_normal(args)
+
+
 def main():
     parser = argparse.ArgumentParser(description='Get statistics')
     parser.add_argument('--result_dir', help='path to result to get errors')
@@ -180,7 +277,7 @@ def main():
 
 if __name__ == '__main__':
     try:
-        main()
+        main_perc_verified()
     except Exception as err:
         print(err)
         import pdb
