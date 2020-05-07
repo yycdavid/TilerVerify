@@ -11,11 +11,11 @@ noise_scale=0.01
 #python trainer/convert_for_milp.py --case road --name $RESULT_FOLDER
 
 
-OFFSET_RANGE=40
-ANGLE_RANGE=60
+OFFSET_RANGE=3
+ANGLE_RANGE=2
 num_threads=20
 exp_name="$noise_mode"_"$noise_scale"
-for grid_size in 0.05 0.2 0.4 0.8
+for grid_size in 0.05 0.2
 do
     #export JULIA_NUM_THREADS=$num_threads
     # Generate dataset for estimate and bound

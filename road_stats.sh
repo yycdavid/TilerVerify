@@ -7,7 +7,7 @@ ANGLE_ERR_THRESH=3.69
 
 if true
 then
-for grid_size in 0.1
+for grid_size in 0.05 0.2 0.4 0.8
 do
     data_name=verify_offset_"$OFFSET_RANGE"_angle_"$ANGLE_RANGE"_grid_"$grid_size"_thread_"$NUM_THREADS"none0.05
 

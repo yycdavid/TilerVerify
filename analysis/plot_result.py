@@ -98,12 +98,31 @@ def plot_time_against_grid_size():
     plt.savefig(plot_file_path)
 
 
+def plot_tradeoff():
+    fixed_time = [253788, 52607, 32935, 47841, 96731]
+    fixed_time = [time/3600 for time in fixed_time]
+    fixed_perc = [99.50, 98.50, 90.56, 35.29, 0.06]
+    adaptive_time = 30000/3600
+    adaptive_perc = 99.70
+
+    plt.figure()
+    plt.plot(fixed_time, fixed_perc, marker='s', label='fixed')
+    plt.xlabel('Verification time (hours)')
+    plt.ylabel('Percentage verified')
+
+    plt.scatter(adaptive_time, adaptive_perc, marker='x', c='r', label='adaptive')
+    plt.legend(loc='lower right')
+
+    plot_file_path = 'trade_off_1.pdf'
+    plt.savefig(plot_file_path)
+
 def main():
     plt.rcParams.update({'font.size': 16})
     plt.rcParams.update({'figure.autolayout': True})
-    plot_99_against_grid_size()
-    plot_trusted_region_against_grid_size()
-    plot_time_against_grid_size()
+    #plot_99_against_grid_size()
+    #plot_trusted_region_against_grid_size()
+    #plot_time_against_grid_size()
+    plot_tradeoff()
 
 if __name__ == '__main__':
     try:
