@@ -73,13 +73,23 @@ def main_normal(args):
 
     # Plot error bound maps
     verify_file_path = os.path.join(result_dir, 'verify_result.mat')
-    verify_result = sio.loadmat(verify_file_path)
+    if args.hdf:
+        with h5py.File(verify_file_path, 'r') as f:
+            verify_result = {}
+            for k, v in f.items():
+                verify_result[k] = np.array(v)
+    else:
+        verify_result = sio.loadmat(verify_file_path)
+
     distance_grid_num = int(verify_result['distance_grid_num'])
     angle_grid_num = int(verify_result['angle_grid_num'])
 
     verified_count = 0
     for label in range(3):
-        verify_list = verify_result['VerifyStatus_'+str(label)][0]
+        if args.hdf:
+            verify_list = verify_result['VerifyStatus_'+str(label)]
+        else:
+            verify_list = verify_result['VerifyStatus_'+str(label)][0]
         for status in verify_list:
             if status == 0:
                 verified_count += 1
@@ -94,6 +104,7 @@ def main():
     parser = argparse.ArgumentParser(description='Get stats for lidar')
     parser.add_argument('--result_dir', help='path to result to get heatmap')
     parser.add_argument('--adaptive', action='store_true')
+    parser.add_argument('--hdf', action='store_true')
     args = parser.parse_args()
     if args.adaptive:
         main_adaptive(args)
